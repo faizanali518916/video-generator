@@ -1,0 +1,9 @@
+node_modules/
+renders/
+videos/
+build/
+dist/
+
+.runtime/
+*.log
+.env
