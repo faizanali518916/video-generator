@@ -1,14 +1,23 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, readdir, rename } from 'node:fs/promises';
+import { mkdir, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { JobManifest } from '../src/shared/schemas';
-import { atomicWriteJson, ensureDataDirectories, exists, readJson } from './fs-store';
+import { atomicWriteJson, ensureDataDirectories, exists, readJson, renameWithRetry } from './fs-store';
 import { JOBS, JOB_STATES } from './paths';
 
 type Processor = (
 	job: JobManifest,
 	update: (patch: Partial<JobManifest>) => Promise<void>
 ) => Promise<Partial<JobManifest> | void>;
+
+const newestJob = (current: JobManifest | undefined, candidate: JobManifest) =>
+	!current || candidate.updatedAt > current.updatedAt ? candidate : current;
+
+export const dedupeJobs = (jobs: JobManifest[]) => {
+	const uniqueJobs = new Map<string, JobManifest>();
+	for (const job of jobs) uniqueJobs.set(job.id, newestJob(uniqueJobs.get(job.id), job));
+	return [...uniqueJobs.values()];
+};
 
 export class JobQueue {
 	private processing = false;
@@ -39,7 +48,7 @@ export class JobQueue {
 				updatedAt: new Date().toISOString(),
 			};
 			await atomicWriteJson(resolve(this.stateDir('running'), file), failed);
-			await rename(resolve(this.stateDir('running'), file), resolve(this.stateDir('failed'), file));
+			await renameWithRetry(resolve(this.stateDir('running'), file), resolve(this.stateDir('failed'), file));
 		}
 		if (this.autoStart) this.schedule();
 	}
@@ -84,9 +93,20 @@ export class JobQueue {
 
 	async get(id: string) {
 		if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+		let found: JobManifest | undefined;
 		for (const state of JOB_STATES)
-			if (await exists(this.file(state, id))) return readJson<JobManifest>(this.file(state, id));
-		return null;
+			if (await exists(this.file(state, id))) found = newestJob(found, await readJson<JobManifest>(this.file(state, id)));
+		return found ?? null;
+	}
+
+	async listByKind(kind: JobManifest['kind']) {
+		await ensureDataDirectories();
+		const jobs: JobManifest[] = [];
+		for (const state of JOB_STATES) {
+			for (const file of (await readdir(this.stateDir(state))).filter((name) => name.endsWith('.json')))
+				jobs.push(await readJson(resolve(this.stateDir(state), file)));
+		}
+		return dedupeJobs(jobs.filter((job) => job.kind === kind)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 	}
 
 	private schedule() {
@@ -94,7 +114,9 @@ export class JobQueue {
 		this.scheduled = true;
 		setTimeout(() => {
 			this.scheduled = false;
-			void this.drain();
+			void this.drain().catch((error) => {
+				console.error('[jobs] queue worker stopped unexpectedly', error);
+			});
 		}, 0);
 	}
 
@@ -110,7 +132,7 @@ export class JobQueue {
 				job = { ...job, status: 'running', stage: 'starting', updatedAt: new Date().toISOString() };
 				await atomicWriteJson(queuedFile, job);
 				const runningFile = this.file('running', job.id);
-				await rename(queuedFile, runningFile);
+				await renameWithRetry(queuedFile, runningFile);
 				const update = async (patch: Partial<JobManifest>) => {
 					job = { ...job, ...patch, id: job.id, updatedAt: new Date().toISOString() };
 					await atomicWriteJson(runningFile, job);
@@ -118,14 +140,14 @@ export class JobQueue {
 				try {
 					const result = await this.processor(job, update);
 					await update({ ...result, status: 'completed', stage: 'completed', progress: 1, error: undefined });
-					await rename(runningFile, this.file('completed', job.id));
+					await renameWithRetry(runningFile, this.file('completed', job.id));
 				} catch (error) {
 					await update({
 						status: 'failed',
 						stage: 'failed',
 						error: error instanceof Error ? error.message : String(error),
 					});
-					await rename(runningFile, this.file('failed', job.id));
+					await renameWithRetry(runningFile, this.file('failed', job.id));
 				}
 			}
 		} finally {

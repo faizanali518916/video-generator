@@ -5,17 +5,19 @@ export const slugSchema = z.string().regex(SLUG_PATTERN, 'Use lowercase letters,
 
 const VIDEO_FOLDER_PREFIX = '../../videos/';
 
-export const videoFolderForSlug = (slug: string): string => `${VIDEO_FOLDER_PREFIX}${slugSchema.parse(slug)}`;
+export const videoFolderForSlug = (slug: string): string => slugSchema.parse(slug);
 
 export const videoSlugFromFolder = (folder: string | undefined): string | null => {
-	if (!folder?.startsWith(VIDEO_FOLDER_PREFIX)) return null;
+	if (!folder) return null;
+	if (slugSchema.safeParse(folder).success) return folder;
+	if (!folder.startsWith(VIDEO_FOLDER_PREFIX)) return null;
 	const parsed = slugSchema.safeParse(folder.slice(VIDEO_FOLDER_PREFIX.length));
 	return parsed.success ? parsed.data : null;
 };
 
 export const videoFolderSchema = z
 	.string()
-	.refine((folder) => videoSlugFromFolder(folder) !== null, 'Use a path like ../../videos/my-video.');
+	.refine((folder) => videoSlugFromFolder(folder) !== null, 'Use a video slug like my-video.');
 
 export const themeSchema = z.object({
 	background: z.string(),
@@ -82,8 +84,18 @@ export const pipelineRequestSchema = z.object({
 	force: z.boolean().default(false),
 });
 
+export const renderRequestSchema = z.object({
+	email: z
+		.string()
+		.trim()
+		.email('Enter a valid notification email.')
+		.optional()
+		.or(z.literal('')),
+});
+
 export type ProjectDocument = z.infer<typeof projectDocumentSchema>;
 export type PipelineRequest = z.infer<typeof pipelineRequestSchema>;
+export type RenderRequest = z.infer<typeof renderRequestSchema>;
 
 export type JobManifest = {
 	id: string;
@@ -95,6 +107,16 @@ export type JobManifest = {
 	projectSlug?: string;
 	action?: PipelineRequest['action'];
 	force?: boolean;
+	recipientEmail?: string;
+	driveConfigured?: boolean;
+	driveLink?: string;
+	driveName?: string;
+	fileId?: string | null;
+	emailConfigured?: boolean;
+	emailSent?: boolean;
+	deliveryStatus?: 'local' | 'uploaded' | 'emailed' | 'partial' | 'failed';
+	deliveryError?: string;
+	emailError?: string;
 	createdAt: string;
 	updatedAt: string;
 	outputPath?: string;

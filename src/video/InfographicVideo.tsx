@@ -71,7 +71,6 @@ const SyncedVideo = ({ mediaMode, muted = false, startFrom, videoSrc }: VideoOnl
 	mediaMode === 'preview' ? (
 		<Html5Video
 			muted={muted}
-			pauseWhenBuffering
 			preload="auto"
 			src={videoSrc}
 			startFrom={startFrom}
@@ -108,7 +107,7 @@ export const InfographicVideo = ({
 	const showCaptions =
 		isVideoBased && template.caption === true && transcriptPages.length > 0 && frame >= introDurationInFrames;
 	const showVideoLayer = Boolean(videoSrc) && isVideoBased && isVideoVisibleAtFrame(segmentRanges, frame);
-	const sourceVideoOpacity = showVideoLayer ? 1 : 0;
+	const sourceVideoOpacity = mediaMode === 'preview' ? 1 : showVideoLayer ? 1 : 0;
 
 	return (
 		<AbsoluteFill
@@ -126,9 +125,9 @@ export const InfographicVideo = ({
 							opacity: sourceVideoOpacity,
 						}}
 					>
-						<SyncedVideo mediaMode={mediaMode} muted={mediaMode === 'render'} startFrom={0} videoSrc={videoSrc} />
+						<SyncedVideo mediaMode={mediaMode} muted startFrom={0} videoSrc={videoSrc} />
 					</AbsoluteFill>
-					{mediaMode === 'render' ? <Audio src={videoSrc} /> : null}
+					<Audio src={videoSrc} />
 				</>
 			) : null}
 

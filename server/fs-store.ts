@@ -4,6 +4,32 @@ import { resolve } from 'node:path';
 import { projectDocumentSchema, slugSchema, videoSlugFromFolder, type ProjectDocument } from '../src/shared/schemas';
 import { PROJECTS, RENDERS, ROOT, RUNTIME, UPLOADS, VIDEOS, assertInside } from './paths';
 
+const RETRYABLE_FILE_ERRORS = new Set(['EACCES', 'EBUSY', 'EPERM']);
+const FILE_OPERATION_ATTEMPTS = 9;
+
+const wait = (milliseconds: number) => new Promise((done) => setTimeout(done, milliseconds));
+
+export const renameWithRetry = async (source: string, target: string) => {
+	for (let attempt = 0; ; attempt += 1) {
+		try {
+			await rename(source, target);
+			return;
+		} catch (error) {
+			const code = (error as NodeJS.ErrnoException).code;
+			if (!code || !RETRYABLE_FILE_ERRORS.has(code) || attempt >= FILE_OPERATION_ATTEMPTS - 1) throw error;
+			const delay = Math.min(40 * 2 ** attempt, 1000);
+			console.warn('[fs] rename temporarily blocked; retrying', {
+				attempt: attempt + 2,
+				code,
+				delay,
+				source,
+				target,
+			});
+			await wait(delay);
+		}
+	}
+};
+
 export const exists = async (path: string) =>
 	access(path)
 		.then(() => true)
@@ -18,9 +44,11 @@ export const atomicWriteJson = async (target: string, value: unknown) => {
 	await mkdir(resolve(target, '..'), { recursive: true });
 	try {
 		await writeFile(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-		await rename(temporary, target);
+		await renameWithRetry(temporary, target);
 	} finally {
-		await rm(temporary, { force: true });
+		await rm(temporary, { force: true }).catch((error) => {
+			console.warn('[fs] could not remove temporary JSON file', { temporary, error });
+		});
 	}
 };
 

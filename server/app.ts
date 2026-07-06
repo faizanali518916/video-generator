@@ -7,6 +7,7 @@ import { createDefaultProject } from '../src/shared/defaults';
 import {
 	pipelineRequestSchema,
 	projectDocumentSchema,
+	renderRequestSchema,
 	slugSchema,
 	videoSlugFromFolder,
 	type JobManifest,
@@ -236,8 +237,27 @@ export const createApplication = async ({ autoStartJobs = true }: { autoStartJob
 					code: 'VIDEO_REQUIRED',
 					status: 400,
 				});
-			const job = await jobs.enqueue({ kind: 'render', projectSlug: slug });
+			const payload = renderRequestSchema.parse(req.body || {});
+			const recipientEmail = typeof payload.email === 'string' && payload.email.trim() ? payload.email.trim() : undefined;
+			const job = await jobs.enqueue({ kind: 'render', projectSlug: slug, recipientEmail });
+			console.info('[render] queued job', {
+				id: job.id,
+				projectSlug: slug,
+				recipientEmail: recipientEmail ?? null,
+			});
 			res.status(202).json(job);
+		})
+	);
+	app.get(
+		'/api/renders',
+		asyncRoute(async (_req, res) => {
+			const renders = await jobs.listByKind('render');
+			res.json(
+				renders.map((job) => ({
+					...job,
+					...(job.status === 'completed' && job.outputPath ? { downloadUrl: `/api/renders/${job.id}/file` } : {}),
+				}))
+			);
 		})
 	);
 

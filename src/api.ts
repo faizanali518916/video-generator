@@ -12,6 +12,7 @@ export type VideoSummary = {
 };
 export type VideoDetail = VideoSummary & { transcriptPages: TranscriptPage[]; activeJob: JobManifest | null };
 export type ProjectSummary = ProjectDocument & { slug: string; updatedAt: string };
+export type RenderSummary = JobManifest & { downloadUrl?: string };
 
 export const request = async <T>(url: string, options?: RequestInit): Promise<T> => {
 	const response = await fetch(url, options);

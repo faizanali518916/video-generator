@@ -5,15 +5,47 @@ import { resolve } from 'node:path';
 import type { JobManifest } from '../src/shared/schemas';
 import { videoSlugFromFolder } from '../src/shared/schemas';
 import type { TranscriptPage } from '../src/video/types';
+import { deliverRender } from './delivery';
 import { exists, readProject, videoPaths } from './fs-store';
 import { RENDERS, ROOT } from './paths';
 
-let bundlePromise: Promise<string> | null = null;
-const getBundle = () =>
-	(bundlePromise ??= bundle({
-		entryPoint: resolve(ROOT, 'src/remotion/index.ts'),
-		publicDir: resolve(ROOT, 'public'),
-	}));
+const createProgressReporter = (
+	update: (patch: Partial<JobManifest>) => Promise<void>,
+	stage: string,
+	mapProgress: (progress: number) => number
+) => {
+	let latestProgress: number | undefined;
+	let timer: NodeJS.Timeout | undefined;
+	let pendingWrite = Promise.resolve();
+	let writeError: unknown;
+
+	const writeLatest = () => {
+		if (latestProgress === undefined) return;
+		const progress = latestProgress;
+		latestProgress = undefined;
+		pendingWrite = pendingWrite.then(() => update({ stage, progress })).catch((error) => {
+			writeError ??= error;
+		});
+	};
+
+	return {
+		report(progress: number) {
+			latestProgress = mapProgress(progress);
+			if (timer) return;
+			timer = setTimeout(() => {
+				timer = undefined;
+				writeLatest();
+			}, 500);
+		},
+		async flush() {
+			if (timer) clearTimeout(timer);
+			timer = undefined;
+			writeLatest();
+			await pendingWrite;
+			if (writeError) throw writeError;
+		},
+	};
+};
 
 export const runRender = async (job: JobManifest, update: (patch: Partial<JobManifest>) => Promise<void>) => {
 	if (!job.projectSlug) throw new Error('Render job is missing its project.');
@@ -32,15 +64,23 @@ export const runRender = async (job: JobManifest, update: (patch: Partial<JobMan
 	}
 
 	await update({ stage: 'bundling', progress: 0.02 });
-	const serveUrl = await getBundle();
+	console.info('[render] stage=bundling', { jobId: job.id, projectSlug: job.projectSlug });
+	const serveUrl = await bundle({
+		entryPoint: resolve(ROOT, 'src/remotion/index.ts'),
+		onProgress: () => undefined,
+		publicDir: resolve(ROOT, 'public'),
+	});
 	const inputProps = { template: project.template, videoSrc, transcriptPages, mediaMode: 'render' as const };
 	const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE || undefined;
 	await update({ stage: 'preparing-render', progress: 0.04 });
+	console.info('[render] stage=preparing-render', { jobId: job.id, hasBrowserExecutable: Boolean(browserExecutable) });
 	const composition = await selectComposition({ serveUrl, id: 'project-render', inputProps, browserExecutable });
 	const outputDirectory = resolve(RENDERS, job.projectSlug);
 	await mkdir(outputDirectory, { recursive: true });
 	const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 	const outputPath = resolve(outputDirectory, `${timestamp}-${job.id}.mp4`);
+	const renderProgress = createProgressReporter(update, 'rendering', (progress) => 0.05 + progress * 0.94);
+	console.info('[render] stage=rendering', { jobId: job.id });
 	await renderMedia({
 		serveUrl,
 		composition,
@@ -50,8 +90,39 @@ export const runRender = async (job: JobManifest, update: (patch: Partial<JobMan
 		browserExecutable,
 		overwrite: true,
 		onProgress: ({ progress }) => {
-			void update({ stage: 'rendering', progress: 0.05 + progress * 0.94 });
+			renderProgress.report(progress);
 		},
 	});
-	return { outputPath };
+	await renderProgress.flush();
+	await update({ stage: 'delivering', progress: 0.98 });
+	console.info('[render] stage=delivering', { jobId: job.id });
+	const deliveryProgress = createProgressReporter(update, 'uploading-to-drive', (progress) => 0.985 + progress * 0.0001);
+	const delivery = await deliverRender({
+		email: job.recipientEmail,
+		filePath: outputPath,
+		onProgress: (progress) => {
+			deliveryProgress.report(progress.percent);
+		},
+	});
+	await deliveryProgress.flush();
+	console.info('[render] delivery result', {
+		jobId: job.id,
+		status: delivery.status,
+		driveConfigured: delivery.driveConfigured,
+		emailConfigured: delivery.emailConfigured,
+		emailSent: delivery.emailSent,
+	});
+	return {
+		deliveryError: delivery.driveError ?? delivery.emailError,
+		deliveryStatus: delivery.status,
+		driveConfigured: delivery.driveConfigured,
+		driveLink: delivery.driveLink,
+		driveName: delivery.driveName,
+		emailConfigured: delivery.emailConfigured,
+		emailError: delivery.emailError,
+		emailSent: delivery.emailSent,
+		fileId: delivery.fileId,
+		outputPath,
+		recipientEmail: delivery.emailTo,
+	};
 };

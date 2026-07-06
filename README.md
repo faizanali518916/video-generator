@@ -1,6 +1,6 @@
 # Video Generator
 
-A local-first React, Tailwind, and Remotion studio for managing source videos, generating timed captions, editing reusable infographic templates, and rendering MP4 files. All persistent data is stored in `projects/`, `videos/`, and `renders/`; there is no database.
+A local-first React, Tailwind, and Remotion studio for managing source videos, generating timed captions, editing reusable infographic templates, and rendering MP4 files. All persistent data is stored in `projects/`, `videos/`, `renders/`, and `.runtime/`; there is no database.
 
 ## Requirements
 
@@ -35,13 +35,25 @@ Open `http://127.0.0.1:4174`.
 2. Open it and run the full caption pipeline.
 3. Create a project and select the video.
 4. Edit the scenes, theme, or raw JSON and save.
-5. Render the project and download the completed MP4.
+5. Render the project, optionally send the result to Drive, and download the completed MP4.
+6. Open **Renders** to review completed jobs and delivery status.
 
-When a source video is selected, the template stores its project-relative folder path (for example,
-`../../videos/my-video`). The renderer uses that folder to load both `video.mp4` and `tokens.json` while
-still supporting older templates that only contain `videoSlug`.
+When a source video is selected, the template stores the video slug in `videoFolder` (for example,
+`my-video`). The renderer resolves that slug to `videos/my-video` and uses it to load both `video.mp4`
+and `tokens.json` while still supporting older templates that only contain the legacy `../../videos/my-video`
+path format.
 
 Caption and render work runs through one persistent filesystem queue. If the app is stopped during a job, that job is marked failed on the next start and can be retried.
+
+To enable Google Drive delivery and Gmail notifications, set the following in `.env`:
+
+- `GOOGLE_ACCESS_TOKEN` or the OAuth refresh-token trio
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REFRESH_TOKEN`
+- `GOOGLE_DRIVE_FOLDER_ID` if you want uploads placed in a specific folder
+- `GOOGLE_DRIVE_SHARE_ANYONE=true` if you want public Drive links
+- `GMAIL_FROM` to send the completion email from a configured Gmail alias
 
 ## Commands
 

@@ -56,10 +56,15 @@ export const ProjectEditorPage = () => {
 	const [segments, setSegments] = useState<FormSegment[]>([]);
 	const [videos, setVideos] = useState<VideoSummary[]>([]);
 	const [tokens, setTokens] = useState<TranscriptPage[]>([]);
+	const [tokensLoaded, setTokensLoaded] = useState(false);
+	const [tokensError, setTokensError] = useState('');
 	const [jsonDraft, setJsonDraft] = useState('');
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [copied, setCopied] = useState(false);
 	const [renderJob, setRenderJob] = useState<RenderJob | null>(null);
+	const [renderStatus, setRenderStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
+	const [renderError, setRenderError] = useState('');
+	const [notificationEmail, setNotificationEmail] = useState('');
 
 	const template = useMemo(
 		() =>
@@ -107,18 +112,84 @@ export const ProjectEditorPage = () => {
 	useEffect(() => {
 		if (!videoSlug) {
 			setTokens([]);
+			setTokensLoaded(false);
+			setTokensError('');
 			return;
 		}
+		setTokensLoaded(false);
+		setTokensError('');
+		console.info('[tokens] loading transcript pages', { slug: videoSlug });
 		void request<VideoDetail>(`/api/videos/${videoSlug}`)
-			.then((video) => setTokens(video.transcriptPages))
-			.catch(() => setTokens([]));
+			.then((video) => {
+				const nextTokens = video.transcriptPages ?? [];
+				console.info('[tokens] loaded transcript pages', {
+					slug: videoSlug,
+					pageCount: nextTokens.length,
+				});
+				setTokens(nextTokens);
+				setTokensLoaded(true);
+			})
+			.catch((error) => {
+				const message = error instanceof Error ? error.message : String(error);
+				console.error('[tokens] failed to load transcript pages', { error, slug: videoSlug });
+				setTokens([]);
+				setTokensLoaded(true);
+				setTokensError(message);
+			});
 	}, [videoSlug]);
 	useEffect(() => {
-		if (!renderJob || ['completed', 'failed'].includes(renderJob.status)) return;
+		if (!renderJob) return;
+		if (renderJob.status === 'failed') {
+			const nextError = renderJob.error || renderJob.deliveryError || 'Render failed.';
+			console.error('[render] job failed', renderJob);
+			setRenderStatus('error');
+			setRenderError(`${nextError} The page shouldn't reload.`);
+			return;
+		}
+		if (renderJob.status === 'completed') {
+			if (renderJob.error || renderJob.deliveryError) {
+				console.error('[render] job completed with errors', renderJob);
+				setRenderStatus('error');
+				setRenderError(`${renderJob.error || renderJob.deliveryError || 'Render failed.'} The page shouldn't reload.`);
+			}
+			return;
+		}
+		console.info('[render] polling job', { id: renderJob.id, status: renderJob.status, stage: renderJob.stage });
 		const timer = setInterval(() => void request<RenderJob>(`/api/jobs/${renderJob.id}`).then(setRenderJob), 1000);
 		return () => clearInterval(timer);
 	}, [renderJob]);
+	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
+	const captionsMissing = videoBased && caption && videoSlug && tokensLoaded && tokens.length === 0;
+	const captionsLoadIssue = videoBased && caption && tokensError ? `Could not load captions for ${videoSlug}: ${tokensError}` : '';
+	const cannotRender = (videoBased && !videoSlug) || Boolean(jsonError);
+	const sourceVideoDisabled = !videoBased;
+	const noticeMessage =
+		error ||
+		renderError ||
+		captionsLoadIssue ||
+		(captionsMissing ? 'Captions are enabled, but this video has no tokens.json yet.' : message);
+	const renderNotice = renderStatus === 'submitting' ? 'Render request sent. Waiting for the job to be created...' : null;
+	useEffect(() => {
+		const visibleMessages = [renderNotice, noticeMessage].filter(Boolean);
 
+		if (!visibleMessages.length) {
+			return;
+		}
+
+		console.info('[ui] visible message', {
+			messages: visibleMessages,
+			renderJob: renderJob
+				? {
+						deliveryStatus: renderJob.deliveryStatus ?? null,
+						deliveryError: renderJob.deliveryError ?? null,
+						error: renderJob.error ?? null,
+						id: renderJob.id,
+						stage: renderJob.stage,
+						status: renderJob.status,
+				  }
+				: null,
+		});
+	}, [noticeMessage, renderJob, renderNotice]);
 	const save = async () => {
 		const nextSlug = slugify(slugDraft);
 		if (!nextSlug) throw new Error('Project slug is invalid.');
@@ -138,11 +209,32 @@ export const ProjectEditorPage = () => {
 	};
 	const render = async () => {
 		try {
+			console.info('[render] button clicked', {
+				email: notificationEmail.trim() || null,
+				projectSlug: slug,
+				sourceVideo: videoSlug,
+			});
 			setError('');
+			setRenderError('');
+			setRenderStatus('submitting');
 			const savedSlug = await save();
-			setRenderJob(await request(`/api/projects/${savedSlug}/render`, { method: 'POST' }));
+			const job = await request<RenderJob>(
+				`/api/projects/${savedSlug}/render`,
+				jsonOptions('POST', { email: notificationEmail.trim() || undefined })
+			);
+			console.info('[render] job queued', job);
+			setRenderJob(job);
+			setRenderStatus('idle');
+			if (job.error || job.deliveryError) {
+				console.error('[render] queue response included an error', job);
+				setRenderStatus('error');
+				setRenderError(`${job.error || job.deliveryError || 'Render failed.'} The page shouldn't reload.`);
+			}
 		} catch (e) {
-			setError(e instanceof Error ? e.message : String(e));
+			const message = e instanceof Error ? e.message : String(e);
+			console.error('[render] request failed', e);
+			setRenderStatus('error');
+			setRenderError(`${message} The page shouldn't reload.`);
 		}
 	};
 	const updateSegment = (index: number, key: keyof FormSegment, value: FormSegment[keyof FormSegment]) =>
@@ -183,29 +275,45 @@ export const ProjectEditorPage = () => {
 				<p>{error || 'Loading project…'}</p>
 			</main>
 		);
-	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
-	const captionsMissing = videoBased && caption && videoSlug && tokens.length === 0;
-	const cannotRender = (videoBased && !videoSlug) || Boolean(jsonError);
 	return (
 		<main className="editor-shell">
 			<div className="editor-topbar">
-				<Link to="/projects">← Projects</Link>
-				<div>
-					<input value={name} onChange={(e) => setName(e.target.value)} aria-label="Project name" />
-					<input value={slugDraft} onChange={(e) => setSlugDraft(e.target.value)} aria-label="Project slug" />
-				</div>
-				<div>
-					<button className="secondary" onClick={() => void saveClick()}>
-						Save
-					</button>
-					<button disabled={cannotRender} onClick={() => void render()}>
-						Render MP4
-					</button>
-				</div>
+				<label className="builder-field">
+					<span>Project name</span>
+					<input value={name} onChange={(e) => setName(e.target.value)} />
+				</label>
+				<label className="builder-field">
+					<span>Project slug</span>
+					<input value={slugDraft} onChange={(e) => setSlugDraft(e.target.value)} />
+				</label>
+				<label className="builder-field">
+					<span>Notification email</span>
+					<input
+						placeholder="Optional"
+						value={notificationEmail}
+						onChange={(e) => setNotificationEmail(e.target.value)}
+					/>
+				</label>
+				<button className="secondary editor-topbar-action" type="button" onClick={() => void saveClick()}>
+					Save
+				</button>
+				<button
+					className="editor-topbar-action"
+					disabled={cannotRender}
+					type="button"
+					onClick={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						void render();
+					}}
+				>
+					{renderStatus === 'submitting' ? 'Rendering...' : 'Render MP4'}
+				</button>
 			</div>
-			{(message || error || captionsMissing) && (
-				<div className={`notice ${error ? 'error' : ''}`}>
-					{error || (captionsMissing ? 'Captions are enabled, but this video has no tokens.json yet.' : message)}
+			{renderNotice ? <div className="notice render-notice">{renderNotice}</div> : null}
+			{noticeMessage && (
+				<div className={`notice ${error || renderError ? 'error render-error' : ''}`}>
+					{noticeMessage}
 				</div>
 			)}
 			{renderJob && (
@@ -213,7 +321,11 @@ export const ProjectEditorPage = () => {
 					<strong>{renderJob.stage.replaceAll('-', ' ')}</strong>
 					<progress max="1" value={renderJob.progress} />
 					<span>{Math.round(renderJob.progress * 100)}%</span>
+					{renderJob.deliveryStatus && <em>Delivery: {renderJob.deliveryStatus}</em>}
+					{renderJob.recipientEmail && <em>To: {renderJob.recipientEmail}</em>}
+					{renderJob.driveConfigured && renderJob.driveLink && <a href={renderJob.driveLink}>Drive link</a>}
 					{renderJob.error && <em>{renderJob.error}</em>}
+					{renderJob.deliveryError && <em>{renderJob.deliveryError}</em>}
 					{renderJob.downloadUrl && <a href={renderJob.downloadUrl}>Download MP4</a>}
 				</div>
 			)}
@@ -227,12 +339,16 @@ export const ProjectEditorPage = () => {
 					</div>
 					<div className="builder-settings">
 						<label className="builder-field wide">
-							<span>Video title</span>
+							<span>Template title</span>
 							<input value={title} onChange={(e) => setTitle(e.target.value)} />
 						</label>
 						<label className="builder-field wide">
 							<span>Source video</span>
-							<select value={videoSlug || ''} onChange={(e) => setVideoSlug(e.target.value || null)}>
+							<select
+								disabled={sourceVideoDisabled}
+								value={videoSlug || ''}
+								onChange={(e) => setVideoSlug(e.target.value || null)}
+							>
 								<option value="">No video</option>
 								{videos.map((video) => (
 									<option value={video.slug} key={video.slug}>
@@ -317,6 +433,7 @@ export const ProjectEditorPage = () => {
 						</div>
 						<div className="preview-player">
 							<Player
+								acknowledgeRemotionLicense
 								component={InfographicVideo}
 								inputProps={{ template, videoSrc: previewVideoSrc, transcriptPages: tokens, mediaMode: 'preview' }}
 								durationInFrames={durationInFrames}
@@ -324,7 +441,9 @@ export const ProjectEditorPage = () => {
 								compositionHeight={VIDEO_HEIGHT}
 								fps={FPS}
 								controls
-								style={{ width: '100%', aspectRatio: `${VIDEO_WIDTH}/${VIDEO_HEIGHT}` }}
+								alwaysShowControls
+								overflowVisible
+								style={{ width: '100%', height: '100%' }}
 							/>
 						</div>
 					</section>

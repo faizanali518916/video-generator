@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "name": "first-project",
+  "name": "Process Optimization",
   "videoSlug": "process-optimization",
   "template": {
     "title": "What is Process Optimization?",
@@ -9,7 +9,7 @@
     "intro": true,
     "outro": true,
     "videoBased": true,
-    "videoFolder": "../../videos/process-optimization",
+    "videoFolder": "process-optimization",
     "theme": {
       "background": "#131532",
       "surface": "#1B1E45",
@@ -139,11 +139,7 @@
       },
       {
         "videoShown": true,
-        "durationSeconds": 4.53
-      },
-      {
-        "videoShown": true,
-        "durationSeconds": 4.22
+        "durationSeconds": 8.75
       }
     ]
   }

@@ -102,7 +102,7 @@ export const toTemplate = (
 	outro,
 	videoBased,
 	caption: videoBased && caption,
-	...(videoFolder ? { videoFolder } : {}),
+	...(videoBased && videoFolder ? { videoFolder } : {}),
 	theme,
 	...(intro && hookText.trim() ? { hookText: hookText.trim() } : {}),
 	segments: segments.map((segment) => {

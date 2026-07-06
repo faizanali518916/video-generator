@@ -1,4 +1,8 @@
-import { createApplication } from './app';
+import { loadEnv } from './env';
+
+await loadEnv();
+
+const { createApplication } = await import('./app');
 
 const port = Number(process.env.PORT || 4174);
 const { app } = await createApplication();
