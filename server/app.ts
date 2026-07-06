@@ -238,7 +238,8 @@ export const createApplication = async ({ autoStartJobs = true }: { autoStartJob
 					status: 400,
 				});
 			const payload = renderRequestSchema.parse(req.body || {});
-			const recipientEmail = typeof payload.email === 'string' && payload.email.trim() ? payload.email.trim() : undefined;
+			const recipientEmail =
+				typeof payload.email === 'string' && payload.email.trim() ? payload.email.trim() : undefined;
 			const job = await jobs.enqueue({ kind: 'render', projectSlug: slug, recipientEmail });
 			console.info('[render] queued job', {
 				id: job.id,

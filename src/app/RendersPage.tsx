@@ -60,10 +60,7 @@ export const RendersPage = () => {
 			{error && <p className="notice error">{error}</p>}
 			<section className="card-grid render-history-grid">
 				{renders.map((job) => (
-					<article
-						className={`library-card render-history-card status-${job.status}`}
-						key={`${job.id}-${job.status}`}
-					>
+					<article className={`library-card render-history-card status-${job.status}`} key={`${job.id}-${job.status}`}>
 						<div className="render-card-content">
 							<div className="render-card-badges">
 								<span className={`status-chip ${statusClass(job)}`}>{statusLabel(job)}</span>

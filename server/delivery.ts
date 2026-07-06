@@ -179,18 +179,15 @@ export async function uploadToDrive(
 		},
 	});
 
-	const uploadResponse = await fetch(
-		uploadUrl,
-		{
-			body: createReadStream(filePath).pipe(progressStream) as unknown as BodyInit,
-			duplex: 'half',
-			headers: {
-				'Content-Length': String(size),
-				'Content-Type': 'video/mp4',
-			},
-			method: 'PUT',
-		} as RequestInit & { duplex: 'half' }
-	);
+	const uploadResponse = await fetch(uploadUrl, {
+		body: createReadStream(filePath).pipe(progressStream) as unknown as BodyInit,
+		duplex: 'half',
+		headers: {
+			'Content-Length': String(size),
+			'Content-Type': 'video/mp4',
+		},
+		method: 'PUT',
+	} as RequestInit & { duplex: 'half' });
 
 	if (!uploadResponse.ok) {
 		console.error('[delivery] Drive upload failed', {
@@ -240,11 +237,7 @@ export async function uploadToDrive(
 }
 
 const toBase64Url = (value: string) =>
-	Buffer.from(value)
-		.toString('base64')
-		.replace(/\+/g, '-')
-		.replace(/\//g, '_')
-		.replace(/=+$/g, '');
+	Buffer.from(value).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 
 export type RenderDelivery = {
 	driveConfigured: boolean;
@@ -340,7 +333,9 @@ export const deliverRender = async ({
 		`File name: ${driveResult.driveName}`,
 		`File size: ${formatBytes((await stat(filePath)).size)}`,
 		`Render file: ${filePath}`,
-	].filter((line): line is string => line !== null).join('\r\n');
+	]
+		.filter((line): line is string => line !== null)
+		.join('\r\n');
 
 	const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
 		body: JSON.stringify({ raw: toBase64Url(messageLines) }),

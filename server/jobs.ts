@@ -95,7 +95,8 @@ export class JobQueue {
 		if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
 		let found: JobManifest | undefined;
 		for (const state of JOB_STATES)
-			if (await exists(this.file(state, id))) found = newestJob(found, await readJson<JobManifest>(this.file(state, id)));
+			if (await exists(this.file(state, id)))
+				found = newestJob(found, await readJson<JobManifest>(this.file(state, id)));
 		return found ?? null;
 	}
 

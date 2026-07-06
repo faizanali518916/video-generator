@@ -160,7 +160,8 @@ export const ProjectEditorPage = () => {
 	}, [renderJob]);
 	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
 	const captionsMissing = videoBased && caption && videoSlug && tokensLoaded && tokens.length === 0;
-	const captionsLoadIssue = videoBased && caption && tokensError ? `Could not load captions for ${videoSlug}: ${tokensError}` : '';
+	const captionsLoadIssue =
+		videoBased && caption && tokensError ? `Could not load captions for ${videoSlug}: ${tokensError}` : '';
 	const cannotRender = (videoBased && !videoSlug) || Boolean(jsonError);
 	const sourceVideoDisabled = !videoBased;
 	const noticeMessage =
@@ -168,7 +169,8 @@ export const ProjectEditorPage = () => {
 		renderError ||
 		captionsLoadIssue ||
 		(captionsMissing ? 'Captions are enabled, but this video has no tokens.json yet.' : message);
-	const renderNotice = renderStatus === 'submitting' ? 'Render request sent. Waiting for the job to be created...' : null;
+	const renderNotice =
+		renderStatus === 'submitting' ? 'Render request sent. Waiting for the job to be created...' : null;
 	useEffect(() => {
 		const visibleMessages = [renderNotice, noticeMessage].filter(Boolean);
 
@@ -186,7 +188,7 @@ export const ProjectEditorPage = () => {
 						id: renderJob.id,
 						stage: renderJob.stage,
 						status: renderJob.status,
-				  }
+					}
 				: null,
 		});
 	}, [noticeMessage, renderJob, renderNotice]);
@@ -312,9 +314,7 @@ export const ProjectEditorPage = () => {
 			</div>
 			{renderNotice ? <div className="notice render-notice">{renderNotice}</div> : null}
 			{noticeMessage && (
-				<div className={`notice ${error || renderError ? 'error render-error' : ''}`}>
-					{noticeMessage}
-				</div>
+				<div className={`notice ${error || renderError ? 'error render-error' : ''}`}>{noticeMessage}</div>
 			)}
 			{renderJob && (
 				<div className={`render-banner ${renderJob.status}`}>

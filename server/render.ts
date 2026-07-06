@@ -23,9 +23,11 @@ const createProgressReporter = (
 		if (latestProgress === undefined) return;
 		const progress = latestProgress;
 		latestProgress = undefined;
-		pendingWrite = pendingWrite.then(() => update({ stage, progress })).catch((error) => {
-			writeError ??= error;
-		});
+		pendingWrite = pendingWrite
+			.then(() => update({ stage, progress }))
+			.catch((error) => {
+				writeError ??= error;
+			});
 	};
 
 	return {
@@ -96,7 +98,11 @@ export const runRender = async (job: JobManifest, update: (patch: Partial<JobMan
 	await renderProgress.flush();
 	await update({ stage: 'delivering', progress: 0.98 });
 	console.info('[render] stage=delivering', { jobId: job.id });
-	const deliveryProgress = createProgressReporter(update, 'uploading-to-drive', (progress) => 0.985 + progress * 0.0001);
+	const deliveryProgress = createProgressReporter(
+		update,
+		'uploading-to-drive',
+		(progress) => 0.985 + progress * 0.0001
+	);
 	const delivery = await deliverRender({
 		email: job.recipientEmail,
 		filePath: outputPath,

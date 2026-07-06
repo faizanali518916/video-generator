@@ -1,43 +1,35 @@
 {
-  "schemaVersion": 1,
-  "name": "Five Second Render Test",
-  "videoSlug": null,
-  "template": {
-    "title": "Render Smoke Test",
-    "caption": false,
-    "intro": false,
-    "outro": false,
-    "videoBased": false,
-    "theme": {
-      "background": "#131532",
-      "surface": "#1B1E45",
-      "primary": "#606bfa",
-      "secondary": "#a0a6fc",
-      "dark": "#131532",
-      "accent": "#67e8f9",
-      "text": "#FFFFFF",
-      "muted": "#C7CBFF"
-    },
-    "segments": [
-      {
-        "videoShown": false,
-        "layout": "stats",
-        "title": "Render Pipeline Ready",
-        "durationSeconds": 5,
-        "subtitle": "A minimal source-free composition for fast render checks.",
-        "metric": "5 SEC",
-        "accent": "#67e8f9",
-        "items": [
-          "Bundle",
-          "Compose",
-          "Render"
-        ],
-        "values": [
-          100,
-          100,
-          100
-        ]
-      }
-    ]
-  }
+	"schemaVersion": 1,
+	"name": "Five Second Render Test",
+	"videoSlug": null,
+	"template": {
+		"title": "Render Smoke Test",
+		"caption": false,
+		"intro": false,
+		"outro": false,
+		"videoBased": false,
+		"theme": {
+			"background": "#131532",
+			"surface": "#1B1E45",
+			"primary": "#606bfa",
+			"secondary": "#a0a6fc",
+			"dark": "#131532",
+			"accent": "#67e8f9",
+			"text": "#FFFFFF",
+			"muted": "#C7CBFF"
+		},
+		"segments": [
+			{
+				"videoShown": false,
+				"layout": "stats",
+				"title": "Render Pipeline Ready",
+				"durationSeconds": 5,
+				"subtitle": "A minimal source-free composition for fast render checks.",
+				"metric": "5 SEC",
+				"accent": "#67e8f9",
+				"items": ["Bundle", "Compose", "Render"],
+				"values": [100, 100, 100]
+			}
+		]
+	}
 }

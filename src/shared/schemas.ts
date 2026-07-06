@@ -85,12 +85,7 @@ export const pipelineRequestSchema = z.object({
 });
 
 export const renderRequestSchema = z.object({
-	email: z
-		.string()
-		.trim()
-		.email('Enter a valid notification email.')
-		.optional()
-		.or(z.literal('')),
+	email: z.string().trim().email('Enter a valid notification email.').optional().or(z.literal('')),
 });
 
 export type ProjectDocument = z.infer<typeof projectDocumentSchema>;

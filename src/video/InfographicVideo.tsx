@@ -69,13 +69,7 @@ const isVideoVisibleAtFrame = (ranges: SegmentRange[], frame: number): boolean =
 
 const SyncedVideo = ({ mediaMode, muted = false, startFrom, videoSrc }: VideoOnlySceneProps) =>
 	mediaMode === 'preview' ? (
-		<Html5Video
-			muted={muted}
-			preload="auto"
-			src={videoSrc}
-			startFrom={startFrom}
-			style={videoFillStyle}
-		/>
+		<Html5Video muted={muted} preload="auto" src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
 	) : (
 		<OffthreadVideo muted={muted} src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
 	);
