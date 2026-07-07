@@ -1,0 +1,102 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "Video Generator Template Schema",
+	"description": "Output only the template object for the editor. No project wrapper fields.",
+	"type": "object",
+	"required": ["title", "theme", "segments"],
+	"additionalProperties": false,
+	"properties": {
+		"title": { "type": "string", "minLength": 1 },
+		"caption": { "type": "boolean" },
+		"hookText": { "type": "string" },
+		"intro": { "type": "boolean" },
+		"outro": { "type": "boolean" },
+		"videoBased": { "type": "boolean" },
+		"videoFolder": { "$ref": "#/$defs/slug" },
+		"theme": { "$ref": "#/$defs/theme" },
+		"segments": {
+			"type": "array",
+			"minItems": 1,
+			"items": { "$ref": "#/$defs/segment" }
+		}
+	},
+	"allOf": [
+		{
+			"if": {
+				"properties": { "videoBased": { "const": true } },
+				"required": ["videoBased"]
+			},
+			"then": {
+				"required": ["videoFolder"]
+			}
+		}
+	],
+	"$defs": {
+		"slug": {
+			"type": "string",
+			"pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+		},
+		"color": {
+			"type": "string",
+			"pattern": "^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$"
+		},
+		"theme": {
+			"type": "object",
+			"required": ["background", "surface", "primary", "secondary", "dark", "accent", "text", "muted"],
+			"additionalProperties": false,
+			"properties": {
+				"background": { "$ref": "#/$defs/color" },
+				"surface": { "$ref": "#/$defs/color" },
+				"primary": { "$ref": "#/$defs/color" },
+				"secondary": { "$ref": "#/$defs/color" },
+				"dark": { "$ref": "#/$defs/color" },
+				"accent": { "$ref": "#/$defs/color" },
+				"text": { "$ref": "#/$defs/color" },
+				"muted": { "$ref": "#/$defs/color" }
+			}
+		},
+		"segment": {
+			"oneOf": [{ "$ref": "#/$defs/videoSegment" }, { "$ref": "#/$defs/animatedSegment" }]
+		},
+		"videoSegment": {
+			"type": "object",
+			"required": ["videoShown", "durationSeconds"],
+			"additionalProperties": false,
+			"properties": {
+				"videoShown": { "const": true },
+				"durationSeconds": { "type": "number", "minimum": 0.25, "maximum": 600 }
+			}
+		},
+		"animatedSegment": {
+			"type": "object",
+			"required": ["videoShown", "layout", "title", "durationSeconds"],
+			"additionalProperties": false,
+			"properties": {
+				"videoShown": { "const": false },
+				"layout": {
+					"enum": [
+						"flowchart",
+						"barGraph",
+						"timeline",
+						"comparison",
+						"radial",
+						"matrix",
+						"stats",
+						"process",
+						"pyramid",
+						"roadmap",
+						"hierarchy",
+						"quadrant"
+					]
+				},
+				"title": { "type": "string", "minLength": 1 },
+				"durationSeconds": { "type": "number", "minimum": 3, "maximum": 600 },
+				"subtitle": { "type": "string" },
+				"metric": { "type": "string" },
+				"accent": { "$ref": "#/$defs/color" },
+				"items": { "type": "array", "items": { "type": "string" } },
+				"values": { "type": "array", "items": { "type": "number" } }
+			}
+		}
+	}
+}
