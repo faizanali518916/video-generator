@@ -16,6 +16,7 @@ import {
 	type InfographicSegment,
 } from '../layoutCatalog';
 import { BRAND_FONTS } from '../brand';
+import { FontGate } from './FontGate';
 import { CaptionsOverlay } from './CaptionsOverlay';
 import { IntroHookOverlay } from './IntroHookOverlay';
 import { SegmentScene } from './SegmentScene';
@@ -90,6 +91,7 @@ export const InfographicVideo = ({
 }: InfographicVideoProps) => {
 	const frame = useCurrentFrame();
 	const { fps } = useVideoConfig();
+	const isPreview = mediaMode === 'preview';
 	const segmentRanges = getSegmentRanges(template.segments, fps);
 	const segmentEndFrame = segmentRanges.reduce(
 		(endFrame, range) => Math.max(endFrame, range.from + range.durationInFrames),
@@ -101,7 +103,7 @@ export const InfographicVideo = ({
 	const showCaptions =
 		isVideoBased && template.caption === true && transcriptPages.length > 0 && frame >= introDurationInFrames;
 	const showVideoLayer = Boolean(videoSrc) && isVideoBased && isVideoVisibleAtFrame(segmentRanges, frame);
-	const sourceVideoOpacity = mediaMode === 'preview' ? 1 : showVideoLayer ? 1 : 0;
+	const sourceVideoOpacity = isPreview ? 1 : showVideoLayer ? 1 : 0;
 
 	return (
 		<AbsoluteFill
@@ -110,7 +112,9 @@ export const InfographicVideo = ({
 				color: template.theme.text,
 				fontFamily: BRAND_FONTS.subheading,
 			}}
-		>
+			>
+			<FontGate />
+
 			{videoSrc && isVideoBased ? (
 				<>
 					<AbsoluteFill
@@ -118,10 +122,10 @@ export const InfographicVideo = ({
 							background: '#000000',
 							opacity: sourceVideoOpacity,
 						}}
-					>
-						<SyncedVideo mediaMode={mediaMode} muted startFrom={0} videoSrc={videoSrc} />
+						>
+						<SyncedVideo mediaMode={mediaMode} muted={!isPreview} startFrom={0} videoSrc={videoSrc} />
 					</AbsoluteFill>
-					<Audio src={videoSrc} />
+					{isPreview ? null : <Audio src={videoSrc} />}
 				</>
 			) : null}
 
