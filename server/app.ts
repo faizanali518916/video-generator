@@ -148,6 +148,9 @@ export const createApplication = async ({ autoStartJobs = true }: { autoStartJob
 				await verifyVideo(temporary);
 				await mkdir(videoDirectory(slug), { recursive: false });
 				await rename(temporary, paths.video);
+				void jobs
+					.enqueue({ kind: 'caption-pipeline', videoSlug: slug, action: 'preview', force: true })
+					.catch((error) => console.warn('[videos] could not enqueue preview generation', { slug, error }));
 				res.status(201).json({ slug, previewUrl: `/api/videos/${encodeURIComponent(slug)}/file` });
 			} finally {
 				if (temporary) await rm(temporary, { force: true });
@@ -172,6 +175,15 @@ export const createApplication = async ({ autoStartJobs = true }: { autoStartJob
 		'/api/videos/:slug/file',
 		asyncRoute(async (req, res) => {
 			await sendMedia(req, res, videoPaths(slugSchema.parse(req.params.slug)).video);
+		})
+	);
+	app.get(
+		'/api/videos/:slug/preview',
+		asyncRoute(async (req, res) => {
+			const paths = videoPaths(slugSchema.parse(req.params.slug));
+			if (!(await exists(paths.preview)))
+				throw Object.assign(new Error('Preview video not found.'), { code: 'PREVIEW_NOT_FOUND', status: 404 });
+			await sendMedia(req, res, paths.preview);
 		})
 	);
 	app.get(

@@ -76,7 +76,7 @@ export const ProjectEditorPage = () => {
 	const [renderStatus, setRenderStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
 	const [renderError, setRenderError] = useState('');
 	const [notificationEmail, setNotificationEmail] = useState('');
-	const [previewQuality, setPreviewQuality] = useState<PreviewQuality>('10');
+	const [previewQuality, setPreviewQuality] = useState<PreviewQuality>('30');
 	const [previewStartFrame, setPreviewStartFrame] = useState(0);
 	const previewPlayerRef = useRef<PlayerRef>(null);
 	const previewSectionRef = useRef<HTMLElement | null>(null);
@@ -130,7 +130,9 @@ export const ProjectEditorPage = () => {
 		[previewStartFrame, toPreviewFrame]
 	);
 	const deferredTokens = useDeferredValue(tokens);
-	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
+	const selectedVideo = useMemo(() => videos.find((video) => video.slug === videoSlug) ?? null, [videos, videoSlug]);
+	const previewVideoSrc =
+		selectedVideo?.previewUrl ?? (videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined);
 	const deferredPreviewVideoSrc = useDeferredValue(previewVideoSrc);
 	const previewInputProps = useMemo(
 		() => ({

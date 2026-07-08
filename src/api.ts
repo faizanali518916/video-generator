@@ -5,6 +5,7 @@ export type VideoSummary = {
 	slug: string;
 	sizeBytes: number;
 	updatedAt: string;
+	hasPreview: boolean;
 	hasAudio: boolean;
 	hasCaptions: boolean;
 	hasTokens: boolean;

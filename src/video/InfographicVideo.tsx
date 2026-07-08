@@ -1,7 +1,6 @@
 import {
 	AbsoluteFill,
 	Audio,
-	Html5Video,
 	OffthreadVideo,
 	Sequence,
 	staticFile,
@@ -68,19 +67,9 @@ const isVideoVisibleAtFrame = (ranges: SegmentRange[], frame: number): boolean =
 			isVideoShownSegment(segment) && frame >= from && frame < from + durationInFrames
 	);
 
-const SyncedVideo = ({ mediaMode, muted = false, startFrom, videoSrc }: VideoOnlySceneProps) =>
-	mediaMode === 'preview' ? (
-		<Html5Video
-			acceptableTimeShiftInSeconds={0.35}
-			muted={muted}
-			pauseWhenBuffering={false}
-			src={videoSrc}
-			startFrom={startFrom}
-			style={videoFillStyle}
-		/>
-	) : (
-		<OffthreadVideo muted={muted} src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
-	);
+const SyncedVideo = ({ muted = false, startFrom, videoSrc }: VideoOnlySceneProps) => (
+	<OffthreadVideo muted={muted} src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
+);
 
 const VideoOnlyScene = ({ mediaMode, muted, startFrom, videoSrc }: VideoOnlySceneProps) => (
 	<AbsoluteFill style={{ background: '#000000' }}>

@@ -125,6 +125,7 @@ export const VideosPage = () => {
 							<h2 className="my-3 text-2xl font-black text-white">{video.slug}</h2>
 							<p className={mutedText}>{size(video.sizeBytes)}</p>
 							<div className="flex gap-1.5">
+								<span className={badgeClass(video.hasPreview)}>Proxy</span>
 								<span className={badgeClass(video.hasAudio)}>WAV</span>
 								<span className={badgeClass(video.hasCaptions)}>Captions</span>
 								<span className={badgeClass(video.hasTokens)}>Tokens</span>

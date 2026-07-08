@@ -120,15 +120,47 @@ export const runCaptionPipeline = async (job: JobManifest, update: (patch: Parti
 	const wantsAudio = job.action === 'audio' || job.action === 'full';
 	const wantsCaptions = job.action === 'captions' || job.action === 'full';
 	const wantsTokens = job.action === 'tokens' || job.action === 'full';
+	const wantsPreview = job.action === 'preview' || job.action === 'full';
+	const cleanup = [];
+	if (force && wantsPreview) cleanup.push(rm(paths.preview, { force: true }));
 	if (force && wantsAudio)
-		await Promise.all([
-			rm(paths.audio, { force: true }),
-			rm(paths.captions, { force: true }),
-			rm(paths.tokens, { force: true }),
+		cleanup.push(rm(paths.audio, { force: true }), rm(paths.captions, { force: true }), rm(paths.tokens, { force: true }));
+	else if (force && wantsCaptions) cleanup.push(rm(paths.captions, { force: true }), rm(paths.tokens, { force: true }));
+	else if (force && wantsTokens) cleanup.push(rm(paths.tokens, { force: true }));
+	await Promise.all(cleanup);
+
+	if (wantsPreview && !existsSync(paths.preview)) {
+		await update({ stage: 'building-preview', progress: 0.05 });
+		await run('ffmpeg', [
+			'-y',
+			'-i',
+			paths.video,
+			'-map',
+			'0:v:0',
+			'-map',
+			'0:a:0?',
+			'-vf',
+			'scale=540:-2',
+			'-c:v',
+			'libx264',
+			'-preset',
+			'veryfast',
+			'-crf',
+			'28',
+			'-pix_fmt',
+			'yuv420p',
+			'-c:a',
+			'aac',
+			'-b:a',
+			'96k',
+			'-ac',
+			'2',
+			'-movflags',
+			'+faststart',
+			paths.preview,
 		]);
-	else if (force && wantsCaptions)
-		await Promise.all([rm(paths.captions, { force: true }), rm(paths.tokens, { force: true })]);
-	else if (force && wantsTokens) await rm(paths.tokens, { force: true });
+		await update({ stage: 'preview-ready', progress: 0.2 });
+	}
 
 	if (wantsAudio && !existsSync(paths.audio)) {
 		await update({ stage: 'extracting-audio', progress: 0.1 });

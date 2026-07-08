@@ -80,7 +80,7 @@ export const projectDocumentSchema = z.object({
 });
 
 export const pipelineRequestSchema = z.object({
-	action: z.enum(['audio', 'captions', 'tokens', 'full']),
+	action: z.enum(['preview', 'audio', 'captions', 'tokens', 'full']),
 	force: z.boolean().default(false),
 });
 

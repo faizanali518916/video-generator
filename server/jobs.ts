@@ -68,7 +68,11 @@ export class JobQueue {
 		const duplicate = active.find(
 			(job) =>
 				job.kind === input.kind &&
-				(input.videoSlug ? job.videoSlug === input.videoSlug : job.projectSlug === input.projectSlug)
+				(input.kind === 'caption-pipeline'
+					? job.videoSlug === input.videoSlug && job.action === input.action
+					: input.videoSlug
+						? job.videoSlug === input.videoSlug
+						: job.projectSlug === input.projectSlug)
 		);
 		if (duplicate)
 			throw Object.assign(new Error('A matching job is already active.'), {

@@ -62,6 +62,7 @@ export const videoPaths = (slug: string) => {
 	return {
 		dir,
 		video: resolve(dir, 'video.mp4'),
+		preview: resolve(dir, 'preview.mp4'),
 		audio: resolve(dir, 'audio.wav'),
 		captions: resolve(dir, 'captions.json'),
 		tokens: resolve(dir, 'tokens.json'),
@@ -131,14 +132,16 @@ export const listVideos = async () => {
 				const paths = videoPaths(entry.name);
 				if (!(await exists(paths.video))) return null;
 				const fileStats = await stat(paths.video);
+				const hasPreview = await exists(paths.preview);
 				return {
 					slug: entry.name,
 					sizeBytes: fileStats.size,
 					updatedAt: fileStats.mtime.toISOString(),
+					hasPreview,
 					hasAudio: await exists(paths.audio),
 					hasCaptions: await exists(paths.captions),
 					hasTokens: await exists(paths.tokens),
-					previewUrl: `/api/videos/${encodeURIComponent(entry.name)}/file`,
+					previewUrl: `/api/videos/${encodeURIComponent(entry.name)}/${hasPreview ? 'preview' : 'file'}`,
 				};
 			})
 	);

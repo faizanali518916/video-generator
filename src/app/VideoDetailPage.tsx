@@ -7,6 +7,8 @@ import { button, errorNotice, eyebrow, mutedText, pageShell, panel, secondaryBut
 const stageDetails: Record<string, { label: string; description: string }> = {
 	queued: { label: 'Queued', description: 'Waiting for the current task to begin.' },
 	starting: { label: 'Starting', description: 'Preparing the caption pipeline.' },
+	'building-preview': { label: 'Building preview', description: 'Creating a smaller browser-friendly preview MP4.' },
+	'preview-ready': { label: 'Preview ready', description: 'The lightweight editor preview has been created.' },
 	'extracting-audio': { label: 'Extracting audio', description: 'Creating a clean 16 kHz audio track.' },
 	'installing-whisper': { label: 'Installing Whisper', description: 'Preparing the transcription engine.' },
 	'downloading-model': { label: 'Downloading model', description: 'Downloading the selected Whisper model.' },
@@ -81,9 +83,16 @@ export const VideoDetailPage = () => {
 					<h2 className="mt-2 text-2xl font-black text-white">Generate each artifact in order.</h2>
 					<div className="my-6 grid gap-2.5">
 						{[
-							{ done: video.hasAudio, label: '1. audio.wav', action: 'audio' as const, disabled: false, buttonText: 'Generate audio' },
-							{ done: video.hasCaptions, label: '2. captions.json', action: 'captions' as const, disabled: !video.hasAudio, buttonText: 'Generate captions' },
-							{ done: video.hasTokens, label: '3. tokens.json', action: 'tokens' as const, disabled: !video.hasCaptions, buttonText: 'Build tokens' },
+							{
+								done: video.hasPreview,
+								label: '1. preview.mp4',
+								action: 'preview' as const,
+								disabled: false,
+								buttonText: 'Generate preview',
+							},
+							{ done: video.hasAudio, label: '2. audio.wav', action: 'audio' as const, disabled: false, buttonText: 'Generate audio' },
+							{ done: video.hasCaptions, label: '3. captions.json', action: 'captions' as const, disabled: !video.hasAudio, buttonText: 'Generate captions' },
+							{ done: video.hasTokens, label: '4. tokens.json', action: 'tokens' as const, disabled: !video.hasCaptions, buttonText: 'Build tokens' },
 						].map((step) => (
 							<div
 								className={`flex items-center justify-between gap-3 rounded-xl border bg-slate-950/70 p-3 ${
