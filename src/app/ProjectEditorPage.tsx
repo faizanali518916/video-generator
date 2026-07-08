@@ -1,5 +1,5 @@
 import { Player } from '@remotion/player';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { JsonPanel } from '../builder/JsonPanel';
 import { SegmentEditor } from '../builder/SegmentEditor';
@@ -82,6 +82,24 @@ export const ProjectEditorPage = () => {
 		[title, hookText, intro, outro, caption, theme, videoBased, segments, videoSlug]
 	);
 	const durationInFrames = useMemo(() => getTemplateDurationInFrames(template, FPS), [template]);
+	const deferredTemplate = useDeferredValue(template);
+	const deferredTokens = useDeferredValue(tokens);
+	const selectedVideo = useMemo(() => videos.find((video) => video.slug === videoSlug) ?? null, [videos, videoSlug]);
+	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
+	const previewAudioSrc =
+		selectedVideo?.hasAudio && videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/audio` : undefined;
+	const deferredPreviewVideoSrc = useDeferredValue(previewVideoSrc);
+	const deferredPreviewAudioSrc = useDeferredValue(previewAudioSrc);
+	const previewInputProps = useMemo(
+		() => ({
+			template: deferredTemplate,
+			videoSrc: deferredPreviewVideoSrc,
+			audioSrc: deferredPreviewAudioSrc,
+			transcriptPages: deferredTokens,
+			mediaMode: 'preview' as const,
+		}),
+		[deferredPreviewAudioSrc, deferredPreviewVideoSrc, deferredTemplate, deferredTokens]
+	);
 	const applyTemplate = useCallback((next: InfographicTemplate, fallbackVideoSlug: string | null = null) => {
 		setTitle(next.title);
 		setHookText(next.hookText || '');
@@ -158,7 +176,6 @@ export const ProjectEditorPage = () => {
 		const timer = setInterval(() => void request<RenderJob>(`/api/jobs/${renderJob.id}`).then(setRenderJob), 1000);
 		return () => clearInterval(timer);
 	}, [renderJob]);
-	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
 	const captionsMissing = videoBased && caption && videoSlug && tokensLoaded && tokens.length === 0;
 	const captionsLoadIssue =
 		videoBased && caption && tokensError ? `Could not load captions for ${videoSlug}: ${tokensError}` : '';
@@ -435,7 +452,7 @@ export const ProjectEditorPage = () => {
 							<Player
 								acknowledgeRemotionLicense
 								component={InfographicVideo}
-								inputProps={{ template, videoSrc: previewVideoSrc, transcriptPages: tokens, mediaMode: 'preview' }}
+								inputProps={previewInputProps}
 								durationInFrames={durationInFrames}
 								compositionWidth={VIDEO_WIDTH}
 								compositionHeight={VIDEO_HEIGHT}

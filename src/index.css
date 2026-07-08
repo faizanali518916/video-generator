@@ -169,13 +169,14 @@ button:disabled {
 .library-card small {
 	color: #aab0da;
 }
-.library-card video {
-	aspect-ratio: 16/10;
-	background: black;
-	border-radius: 12px;
-	margin: -10px -10px 14px;
-	object-fit: cover;
-	width: calc(100% + 20px);
+.library-card.media .library-card-frame video {
+	background: #02040b;
+	border-radius: 14px;
+	display: block;
+	height: 100%;
+	object-fit: contain;
+	object-position: center center;
+	width: 100%;
 }
 .status-chip {
 	background: rgba(96, 107, 250, 0.16);
@@ -1473,11 +1474,29 @@ body::before {
 	padding: 14px;
 }
 
+.library-card-frame {
+	align-items: center;
+	background:
+		radial-gradient(circle at top, rgba(96, 107, 250, 0.16), transparent 45%),
+		linear-gradient(180deg, rgba(3, 7, 18, 0.98), rgba(8, 12, 26, 0.92));
+	border: 1px solid rgba(147, 197, 253, 0.16);
+	border-radius: 18px;
+	display: grid;
+	justify-items: center;
+	min-height: 0;
+	overflow: hidden;
+	padding: 12px;
+	position: relative;
+	aspect-ratio: 1080 / 1920;
+}
+
 .media-card video {
-	aspect-ratio: 9 / 16;
 	background: #02040b;
-	border-radius: 16px;
-	object-fit: cover;
+	border-radius: 14px;
+	display: block;
+	height: 100%;
+	object-fit: contain;
+	object-position: center center;
 	width: 100%;
 }
 
@@ -1490,6 +1509,21 @@ body::before {
 
 .media-card-body strong {
 	color: #f7f8ff;
+}
+
+.library-card-resolution {
+	background: rgba(7, 12, 28, 0.82);
+	border: 1px solid rgba(147, 197, 253, 0.18);
+	border-radius: 999px;
+	color: #d7dcff;
+	font-size: 11px;
+	font-weight: 900;
+	left: 12px;
+	letter-spacing: 0.12em;
+	padding: 6px 9px;
+	position: absolute;
+	top: 12px;
+	text-transform: uppercase;
 }
 
 .job-page {

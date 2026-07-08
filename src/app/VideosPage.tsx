@@ -98,7 +98,10 @@ export const VideosPage = () => {
 			<section className="card-grid">
 				{videos.map((video) => (
 					<article className="library-card media" key={video.slug}>
-						<video controls preload="metadata" src={video.previewUrl} />
+						<div className="library-card-frame">
+							<video controls preload="metadata" src={video.previewUrl} />
+							<span className="library-card-resolution">1080 × 1920</span>
+						</div>
 						<div>
 							<h2>{video.slug}</h2>
 							<p>{size(video.sizeBytes)}</p>

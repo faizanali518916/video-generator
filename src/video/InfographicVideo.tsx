@@ -1,7 +1,6 @@
 import {
 	AbsoluteFill,
 	Audio,
-	Html5Video,
 	OffthreadVideo,
 	Sequence,
 	staticFile,
@@ -68,12 +67,9 @@ const isVideoVisibleAtFrame = (ranges: SegmentRange[], frame: number): boolean =
 			isVideoShownSegment(segment) && frame >= from && frame < from + durationInFrames
 	);
 
-const SyncedVideo = ({ mediaMode, muted = false, startFrom, videoSrc }: VideoOnlySceneProps) =>
-	mediaMode === 'preview' ? (
-		<Html5Video muted={muted} preload="auto" src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
-	) : (
-		<OffthreadVideo muted={muted} src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
-	);
+const SyncedVideo = ({ muted = false, startFrom, videoSrc }: VideoOnlySceneProps) => (
+	<OffthreadVideo muted={muted} src={videoSrc} startFrom={startFrom} style={videoFillStyle} />
+);
 
 const VideoOnlyScene = ({ mediaMode, muted, startFrom, videoSrc }: VideoOnlySceneProps) => (
 	<AbsoluteFill style={{ background: '#000000' }}>
@@ -85,6 +81,7 @@ const getOutroDurationInFrames = (fps: number): number => Math.round(OUTRO_DURAT
 
 export const InfographicVideo = ({
 	mediaMode = 'render',
+	audioSrc,
 	transcriptPages = [],
 	template,
 	videoSrc,
@@ -92,6 +89,7 @@ export const InfographicVideo = ({
 	const frame = useCurrentFrame();
 	const { fps } = useVideoConfig();
 	const isPreview = mediaMode === 'preview';
+	const useSeparatePreviewAudio = isPreview && Boolean(audioSrc);
 	const segmentRanges = getSegmentRanges(template.segments, fps);
 	const segmentEndFrame = segmentRanges.reduce(
 		(endFrame, range) => Math.max(endFrame, range.from + range.durationInFrames),
@@ -122,10 +120,15 @@ export const InfographicVideo = ({
 							background: '#000000',
 							opacity: sourceVideoOpacity,
 						}}
-						>
-						<SyncedVideo mediaMode={mediaMode} muted={!isPreview} startFrom={0} videoSrc={videoSrc} />
+					>
+						<SyncedVideo
+							mediaMode={mediaMode}
+							muted={useSeparatePreviewAudio}
+							startFrom={0}
+							videoSrc={videoSrc}
+						/>
 					</AbsoluteFill>
-					{isPreview ? null : <Audio src={videoSrc} />}
+					{useSeparatePreviewAudio ? <Audio src={audioSrc} /> : !isPreview ? <Audio src={videoSrc} /> : null}
 				</>
 			) : null}
 

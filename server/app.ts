@@ -37,14 +37,20 @@ const asyncRoute =
 	(req: Request, res: Response, next: NextFunction) =>
 		void handler(req, res, next).catch(next);
 
-const sendMedia = async (req: Request, res: Response, target: string, downloadName?: string) => {
+const sendMedia = async (
+	req: Request,
+	res: Response,
+	target: string,
+	downloadName?: string,
+	contentType = 'video/mp4'
+) => {
 	const fileStats = await stat(target);
 	const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
 	if (req.headers.range && !match) {
 		res.status(416).set('Content-Range', `bytes */${fileStats.size}`).end();
 		return;
 	}
-	const headers: Record<string, string | number> = { 'Accept-Ranges': 'bytes', 'Content-Type': 'video/mp4' };
+	const headers: Record<string, string | number> = { 'Accept-Ranges': 'bytes', 'Content-Type': contentType };
 	if (downloadName) headers['Content-Disposition'] = `attachment; filename="${downloadName}"`;
 	if (match) {
 		const start = match[1] ? Number(match[1]) : Math.max(fileStats.size - Number(match[2]), 0);
@@ -161,6 +167,15 @@ export const createApplication = async ({ autoStartJobs = true }: { autoStartJob
 		'/api/videos/:slug/file',
 		asyncRoute(async (req, res) => {
 			await sendMedia(req, res, videoPaths(slugSchema.parse(req.params.slug)).video);
+		})
+	);
+	app.get(
+		'/api/videos/:slug/audio',
+		asyncRoute(async (req, res) => {
+			const paths = videoPaths(slugSchema.parse(req.params.slug));
+			if (!(await exists(paths.audio)))
+				throw Object.assign(new Error('Audio not found.'), { code: 'AUDIO_NOT_FOUND', status: 404 });
+			await sendMedia(req, res, paths.audio, undefined, 'audio/wav');
 		})
 	);
 	app.post(
