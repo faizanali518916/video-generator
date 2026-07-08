@@ -1,3 +1,4 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
 import {
@@ -12,6 +13,7 @@ import {
 } from '../utils';
 
 export const StatsLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const values = ensureValues(segment, items.length);
 
@@ -24,7 +26,7 @@ export const StatsLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
 				width: '100%',
 			}}
 		>
-			<GlowCard accent={accent} shine={reveal(frame)} theme={theme} style={{ padding: 32 }}>
+			<GlowCard accent={accent} shine={reveal(frame, fps)} theme={theme} style={{ padding: 32 }}>
 				<div
 					style={{
 						...headingTextStyle,
@@ -52,7 +54,7 @@ export const StatsLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
 						style={{
 							background: vividGradient(theme, accent),
 							height: '100%',
-							transform: `scaleX(${reveal(frame, 1)})`,
+							transform: `scaleX(${reveal(frame, fps, 1)})`,
 							transformOrigin: 'left center',
 							width: `${values[0]}%`,
 						}}
@@ -64,11 +66,11 @@ export const StatsLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
 					<GlowCard
 						accent={accent}
 						key={item}
-						shine={reveal(frame, itemIndex + 2)}
+						shine={reveal(frame, fps, itemIndex + 2)}
 						theme={theme}
 						style={{
 							padding: 28,
-							...enterStyle(reveal(frame, itemIndex + 2), 24),
+							...enterStyle(reveal(frame, fps, itemIndex + 2), 24),
 						}}
 					>
 						<div

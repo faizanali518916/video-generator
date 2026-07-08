@@ -1,9 +1,11 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import { HighlightTag } from '../primitives/HighlightTag';
 import type { LayoutProps } from '../types';
 import { ensureItems, enterStyle, headingTextStyle, reveal, withAlpha } from '../utils';
 
 export const ComparisonLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const midpoint = Math.ceil(items.length / 2);
 	const columns = [
@@ -24,7 +26,7 @@ export const ComparisonLayout = ({ accent, frame, segment, theme }: LayoutProps)
 				<GlowCard
 					accent={column.color}
 					key={column.label}
-					shine={reveal(frame, columnIndex)}
+					shine={reveal(frame, fps, columnIndex)}
 					theme={theme}
 					style={{
 						padding: '32px 28px',
@@ -57,7 +59,7 @@ export const ComparisonLayout = ({ accent, frame, segment, theme }: LayoutProps)
 									padding: '23px',
 									position: 'relative',
 									...headingTextStyle,
-									...enterStyle(reveal(frame, itemIndex + 2), 22),
+									...enterStyle(reveal(frame, fps, itemIndex + 2), 22),
 								}}
 							>
 								{item}

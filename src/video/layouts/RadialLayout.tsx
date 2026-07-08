@@ -1,15 +1,16 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
 import { drift, ensureItems, headingTextStyle, reveal, withAlpha } from '../utils';
 
 export const RadialLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 
 	const radius = 326;
 
-	// 360-degree orbit every 240 frames
-	// At 30fps, this is 8 seconds.
-	const orbit = (frame / 240) * Math.PI * 2;
+	// 360-degree orbit every 8 seconds.
+	const orbit = (frame / (fps * 8)) * Math.PI * 2;
 
 	return (
 		<div
@@ -36,7 +37,7 @@ export const RadialLayout = ({ accent, frame, segment, theme }: LayoutProps) => 
 
 			<GlowCard
 				accent={accent}
-				shine={reveal(frame)}
+				shine={reveal(frame, fps)}
 				theme={theme}
 				style={{
 					alignItems: 'center',
@@ -48,7 +49,7 @@ export const RadialLayout = ({ accent, frame, segment, theme }: LayoutProps) => 
 					position: 'absolute',
 					textAlign: 'center',
 					top: '50%',
-					transform: `translate(-50%, -50%) rotate(${drift(frame, 2, 80)}deg)`,
+					transform: `translate(-50%, -50%) rotate(${drift(frame, 2, fps, 80)}deg)`,
 					width: 290,
 					zIndex: 3,
 				}}
@@ -79,7 +80,7 @@ export const RadialLayout = ({ accent, frame, segment, theme }: LayoutProps) => 
 				const x = Math.cos(angle) * radius;
 				const y = Math.sin(angle) * radius;
 
-				const amount = reveal(frame, itemIndex);
+				const amount = reveal(frame, fps, itemIndex);
 
 				return (
 					<GlowCard

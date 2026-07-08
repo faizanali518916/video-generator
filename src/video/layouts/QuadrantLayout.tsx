@@ -1,9 +1,11 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import { HighlightTag } from '../primitives/HighlightTag';
 import type { LayoutProps } from '../types';
 import { ensureItems, enterStyle, headingTextStyle, reveal, vividGradient, withAlpha } from '../utils';
 
 export const QuadrantLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const labels = ['Spark', 'Launch', 'Tune', 'Pause'];
 
@@ -71,14 +73,14 @@ export const QuadrantLayout = ({ accent, frame, segment, theme }: LayoutProps) =
 					<GlowCard
 						accent={accent}
 						key={item}
-						shine={reveal(frame, itemIndex)}
+						shine={reveal(frame, fps, itemIndex)}
 						theme={theme}
 						style={{
 							display: 'flex',
 							flexDirection: 'column',
 							justifyContent: 'space-between',
 							padding: 28,
-							...enterStyle(reveal(frame, itemIndex), 24),
+							...enterStyle(reveal(frame, fps, itemIndex), 24),
 						}}
 					>
 						<HighlightTag accent={accent} index={itemIndex} theme={theme}>

@@ -1,3 +1,4 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
 import {
@@ -11,6 +12,7 @@ import {
 } from '../utils';
 
 export const BarGraphLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const values = ensureValues(segment, items.length);
 	const maxValue = Math.max(...values, 1);
@@ -23,7 +25,7 @@ export const BarGraphLayout = ({ accent, frame, segment, theme }: LayoutProps) =
 				gap: 16,
 				gridTemplateColumns: `repeat(${items.length}, 1fr)`,
 			}}
-			shine={reveal(frame)}
+			shine={reveal(frame, fps)}
 			theme={theme}
 			style={{
 				padding: '42px 36px 34px',
@@ -31,7 +33,7 @@ export const BarGraphLayout = ({ accent, frame, segment, theme }: LayoutProps) =
 			}}
 		>
 			{items.map((item, itemIndex) => {
-				const amount = reveal(frame, itemIndex);
+				const amount = reveal(frame, fps, itemIndex);
 				const height = `${Math.max(16, (values[itemIndex] / maxValue) * 100)}%`;
 
 				return (

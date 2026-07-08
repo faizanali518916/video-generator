@@ -1,7 +1,9 @@
+import { useVideoConfig } from 'remotion';
 import type { LayoutProps } from '../types';
 import { ensureItems, headingTextStyle, reveal, vividGradient, withAlpha } from '../utils';
 
 export const PyramidLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 
 	const baseWidth = 760;
@@ -22,7 +24,7 @@ export const PyramidLayout = ({ accent, frame, segment, theme }: LayoutProps) =>
 			}}
 		>
 			{items.map((item, itemIndex) => {
-				const amount = reveal(frame, itemIndex);
+				const amount = reveal(frame, fps, itemIndex);
 
 				const yTop = itemIndex * (layerHeight + gap);
 				const yBottom = yTop + layerHeight;

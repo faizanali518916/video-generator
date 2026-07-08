@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { interpolate } from 'remotion';
+import { FPS } from '../layoutCatalog';
 import { getLayoutItemCount, type AnimationSegment, type Theme } from '../layoutCatalog';
 import { BRAND_FONTS } from '../brand';
 
@@ -40,6 +41,8 @@ export const withAlpha = (color: string, alpha: number): string => {
 	return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
 };
 
+export const scaleFrameCount = (frameCount: number, fps: number): number => Math.max(1, Math.round((frameCount / FPS) * fps));
+
 export const ensureItems = (segment: AnimationSegment, desiredCount = getLayoutItemCount(segment)): string[] => {
 	const existing = segment.items?.filter(Boolean) ?? [];
 	const merged = [...existing, ...fallbackItems];
@@ -54,14 +57,14 @@ export const ensureValues = (segment: AnimationSegment, desiredCount: number): n
 	return merged.slice(0, desiredCount);
 };
 
-export const reveal = (frame: number, order = 0): number =>
-	interpolate(frame, [6 + order * 4, 24 + order * 4], [0, 1], {
+export const reveal = (frame: number, fps: number, order = 0): number =>
+	interpolate(frame, [scaleFrameCount(6 + order * 4, fps), scaleFrameCount(24 + order * 4, fps)], [0, 1], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
 
-export const drift = (frame: number, amount: number, speed = 36, offset = 0): number =>
-	Math.sin((frame + offset) / speed) * amount;
+export const drift = (frame: number, amount: number, fps: number, speed = 36, offset = 0): number =>
+	Math.sin((frame + offset) / scaleFrameCount(speed, fps)) * amount;
 
 export const enterStyle = (amount: number, lift = 34): CSSProperties => ({
 	opacity: amount,

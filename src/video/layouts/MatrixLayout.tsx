@@ -1,9 +1,11 @@
+import { useVideoConfig } from 'remotion';
 import { GlowCard } from '../primitives/GlowCard';
 import { HighlightTag } from '../primitives/HighlightTag';
 import type { LayoutProps } from '../types';
 import { ensureItems, enterStyle, headingTextStyle, reveal, vividGradient, withAlpha } from '../utils';
 
 export const MatrixLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const labels = ['Pop', 'Push', 'Build', 'Hold'];
 
@@ -20,12 +22,12 @@ export const MatrixLayout = ({ accent, frame, segment, theme }: LayoutProps) => 
 				<GlowCard
 					accent={accent}
 					key={item}
-					shine={reveal(frame, itemIndex)}
+					shine={reveal(frame, fps, itemIndex)}
 					theme={theme}
 					style={{
 						minHeight: 382,
 						padding: 32,
-						...enterStyle(reveal(frame, itemIndex)),
+						...enterStyle(reveal(frame, fps, itemIndex)),
 					}}
 				>
 					<HighlightTag accent={accent} index={itemIndex} theme={theme}>
@@ -40,7 +42,7 @@ export const MatrixLayout = ({ accent, frame, segment, theme }: LayoutProps) => 
 							left: 32,
 							position: 'absolute',
 							right: 32,
-							transform: `scaleX(${reveal(frame, itemIndex + 1)})`,
+							transform: `scaleX(${reveal(frame, fps, itemIndex + 1)})`,
 							transformOrigin: 'left center',
 						}}
 					/>

@@ -1,3 +1,4 @@
+import { useVideoConfig } from 'remotion';
 import { Arrow } from '../primitives/Arrow';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
@@ -12,6 +13,7 @@ import {
 } from '../utils';
 
 export const TimelineLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 
 	return (
@@ -29,7 +31,7 @@ export const TimelineLayout = ({ accent, frame, segment, theme }: LayoutProps) =
 			/>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 27 }}>
 				{items.map((item, itemIndex) => {
-					const amount = reveal(frame, itemIndex);
+					const amount = reveal(frame, fps, itemIndex);
 
 					return (
 						<div

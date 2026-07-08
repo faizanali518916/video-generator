@@ -33,12 +33,13 @@ import type { TranscriptPage } from '../video/types';
 
 type ProjectPayload = ProjectDocument & { slug: string };
 type RenderJob = JobManifest & { downloadUrl?: string };
-type PreviewQuality = 'smooth' | 'balanced' | 'full';
+type PreviewQuality = '5' | '10' | '20' | '30';
 
 const previewQualityOptions: Record<PreviewQuality, { fps: number; label: string }> = {
-	smooth: { fps: 15, label: 'Smooth' },
-	balanced: { fps: 24, label: 'Balanced' },
-	full: { fps: FPS, label: 'Full' },
+	'5': { fps: 5, label: '5' },
+	'10': { fps: 10, label: '10' },
+	'20': { fps: 20, label: '20' },
+	'30': { fps: 30, label: '30' },
 };
 
 const formSegments = (template: InfographicTemplate): FormSegment[] =>
@@ -75,7 +76,7 @@ export const ProjectEditorPage = () => {
 	const [renderStatus, setRenderStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
 	const [renderError, setRenderError] = useState('');
 	const [notificationEmail, setNotificationEmail] = useState('');
-	const [previewQuality, setPreviewQuality] = useState<PreviewQuality>('smooth');
+	const [previewQuality, setPreviewQuality] = useState<PreviewQuality>('10');
 	const [previewStartFrame, setPreviewStartFrame] = useState(0);
 	const previewPlayerRef = useRef<PlayerRef>(null);
 	const previewSectionRef = useRef<HTMLElement | null>(null);
@@ -542,7 +543,7 @@ export const ProjectEditorPage = () => {
 								>
 									{Object.entries(previewQualityOptions).map(([value, option]) => (
 										<option key={value} value={value}>
-											{option.label} / {option.fps} FPS
+											{option.label} FPS
 										</option>
 									))}
 								</select>

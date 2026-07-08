@@ -7,6 +7,7 @@ import {
 	type InfographicTemplate,
 } from '../layoutCatalog';
 import { SceneBackdrop } from './scene/SceneBackdrop';
+import { scaleFrameCount } from './utils';
 
 type IntroHookOverlayProps = {
 	template: InfographicTemplate;
@@ -30,7 +31,7 @@ export const IntroHookOverlay = ({ template }: IntroHookOverlayProps) => {
 	const theme = { ...defaultTheme, ...template.theme };
 	const accent = theme.accent;
 	const durationInFrames = Math.round(INTRO_HOOK_DURATION_SECONDS * fps);
-	const typingFrames = Math.max(24, Math.round(durationInFrames * 0.65));
+	const typingFrames = Math.max(scaleFrameCount(24, fps), Math.round(durationInFrames * 0.65));
 	const enterProgress = spring({
 		fps,
 		frame,
@@ -40,7 +41,7 @@ export const IntroHookOverlay = ({ template }: IntroHookOverlayProps) => {
 			stiffness: 90,
 		},
 	});
-	const fadeOut = interpolate(frame, [durationInFrames - 18, durationInFrames - 1], [1, 0], {
+	const fadeOut = interpolate(frame, [durationInFrames - scaleFrameCount(18, fps), durationInFrames - 1], [1, 0], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
@@ -50,7 +51,7 @@ export const IntroHookOverlay = ({ template }: IntroHookOverlayProps) => {
 	});
 	const hookText = template.hookText?.trim() || 'What if the whole system moved faster?';
 	const typedText = getTypedText(hookText, typingProgress);
-	const cursorVisible = Math.floor(frame / 6) % 2 === 0;
+	const cursorVisible = Math.floor(frame / scaleFrameCount(6, fps)) % 2 === 0;
 	const isTypingComplete = typingProgress >= 1;
 
 	return (

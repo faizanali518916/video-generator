@@ -3,7 +3,7 @@ import { ANIMATION_SAFE_ZONE_BOTTOM_PX, defaultTheme } from '../layoutCatalog';
 import { SceneBackdrop } from './scene/SceneBackdrop';
 import { renderLayout } from './layouts/renderLayout';
 import type { SegmentSceneProps } from './types';
-import { enterStyle, headingTextStyle, reveal, subheadingTextStyle } from './utils';
+import { enterStyle, headingTextStyle, reveal, scaleFrameCount, subheadingTextStyle } from './utils';
 
 export const SegmentScene = ({ durationInFrames, index, segment, template }: SegmentSceneProps) => {
 	const frame = useCurrentFrame();
@@ -19,7 +19,7 @@ export const SegmentScene = ({ durationInFrames, index, segment, template }: Seg
 			stiffness: 90,
 		},
 	});
-	const outro = interpolate(frame, [durationInFrames - 18, durationInFrames - 1], [1, 0], {
+	const outro = interpolate(frame, [durationInFrames - scaleFrameCount(18, fps), durationInFrames - 1], [1, 0], {
 		extrapolateLeft: 'clamp',
 		extrapolateRight: 'clamp',
 	});
@@ -40,7 +40,7 @@ export const SegmentScene = ({ durationInFrames, index, segment, template }: Seg
 					marginTop: 66,
 					position: 'relative',
 					zIndex: 2,
-					...enterStyle(reveal(frame), 18),
+					...enterStyle(reveal(frame, fps), 18),
 				}}
 			>
 				<h1

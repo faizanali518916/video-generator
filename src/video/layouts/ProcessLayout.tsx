@@ -1,9 +1,11 @@
+import { useVideoConfig } from 'remotion';
 import { Arrow } from '../primitives/Arrow';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
 import { ensureItems, enterStyle, headingTextStyle, reveal, vividGradient } from '../utils';
 
 export const ProcessLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 
 	return (
@@ -24,12 +26,12 @@ export const ProcessLayout = ({ accent, frame, segment, theme }: LayoutProps) =>
 						gridTemplateColumns: '106px 1fr 128px',
 					}}
 					key={item}
-					shine={reveal(frame, itemIndex)}
+					shine={reveal(frame, fps, itemIndex)}
 					theme={theme}
 					style={{
 						minHeight: 126,
 						padding: '20px 26px',
-						...enterStyle(reveal(frame, itemIndex), 26),
+						...enterStyle(reveal(frame, fps, itemIndex), 26),
 					}}
 				>
 					<div
@@ -59,7 +61,7 @@ export const ProcessLayout = ({ accent, frame, segment, theme }: LayoutProps) =>
 					>
 						{item}
 					</div>
-					<Arrow accent={accent} opacity={reveal(frame, itemIndex + 1)} style={{ alignSelf: 'center' }} />
+					<Arrow accent={accent} opacity={reveal(frame, fps, itemIndex + 1)} style={{ alignSelf: 'center' }} />
 				</GlowCard>
 			))}
 		</div>

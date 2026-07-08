@@ -1,3 +1,4 @@
+import { useVideoConfig } from 'remotion';
 import { Arrow } from '../primitives/Arrow';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
@@ -12,6 +13,7 @@ import {
 } from '../utils';
 
 export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 	const top = items[0];
 	const remainingItems = items.slice(1);
@@ -32,7 +34,7 @@ export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) 
 		>
 			<GlowCard
 				accent={accent}
-				shine={reveal(frame)}
+				shine={reveal(frame, fps)}
 				theme={theme}
 				style={{ padding: '30px 42px', textAlign: 'center', width: 620 }}
 			>
@@ -48,7 +50,7 @@ export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) 
 					{top}
 				</div>
 			</GlowCard>
-			<Arrow accent={accent} opacity={reveal(frame, 1)} rotate={90} />
+			<Arrow accent={accent} opacity={reveal(frame, fps, 1)} rotate={90} />
 			<div
 				style={{
 					display: 'grid',
@@ -61,7 +63,7 @@ export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) 
 					<GlowCard
 						accent={accent}
 						key={item}
-						shine={reveal(frame, itemIndex + 1)}
+						shine={reveal(frame, fps, itemIndex + 1)}
 						theme={theme}
 						style={{
 							fontSize: 30,
@@ -71,7 +73,7 @@ export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) 
 							padding: '28px 22px',
 							textAlign: 'center',
 							...headingTextStyle,
-							...enterStyle(reveal(frame, itemIndex + 1), 24),
+							...enterStyle(reveal(frame, fps, itemIndex + 1), 24),
 						}}
 					>
 						{item}
@@ -101,7 +103,7 @@ export const HierarchyLayout = ({ accent, frame, segment, theme }: LayoutProps) 
 								padding: '24px 16px',
 								textAlign: 'center',
 								...subheadingTextStyle,
-								...enterStyle(reveal(frame, itemIndex + managerCount + 1), 22),
+								...enterStyle(reveal(frame, fps, itemIndex + managerCount + 1), 22),
 							}}
 						>
 							<div

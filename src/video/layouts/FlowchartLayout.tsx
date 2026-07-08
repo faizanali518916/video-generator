@@ -1,16 +1,18 @@
+import { useVideoConfig } from 'remotion';
 import { CurvedArrow } from '../primitives/CurvedArrow';
 import { GlowCard } from '../primitives/GlowCard';
 import type { LayoutProps } from '../types';
 import { ensureItems, enterStyle, headingTextStyle, reveal, subheadingTextStyle } from '../utils';
 
 export const FlowchartLayout = ({ accent, frame, segment, theme }: LayoutProps) => {
+	const { fps } = useVideoConfig();
 	const items = ensureItems(segment);
 
 	return (
 		<div style={{ position: 'relative', width: '100%' }}>
 			<div style={{ display: 'flex', flexDirection: 'column', gap: 42 }}>
 				{items.map((item, itemIndex) => {
-					const amount = reveal(frame, itemIndex);
+					const amount = reveal(frame, fps, itemIndex);
 					const isLeft = itemIndex % 2 === 0;
 
 					return (
