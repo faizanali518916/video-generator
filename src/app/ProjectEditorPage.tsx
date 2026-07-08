@@ -130,21 +130,16 @@ export const ProjectEditorPage = () => {
 		[previewStartFrame, toPreviewFrame]
 	);
 	const deferredTokens = useDeferredValue(tokens);
-	const selectedVideo = useMemo(() => videos.find((video) => video.slug === videoSlug) ?? null, [videos, videoSlug]);
 	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
-	const previewAudioSrc =
-		selectedVideo?.hasAudio && videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/audio` : undefined;
 	const deferredPreviewVideoSrc = useDeferredValue(previewVideoSrc);
-	const deferredPreviewAudioSrc = useDeferredValue(previewAudioSrc);
 	const previewInputProps = useMemo(
 		() => ({
 			template: deferredTemplate,
 			videoSrc: deferredPreviewVideoSrc,
-			audioSrc: deferredPreviewAudioSrc,
 			transcriptPages: deferredTokens,
 			mediaMode: 'preview' as const,
 		}),
-		[deferredPreviewAudioSrc, deferredPreviewVideoSrc, deferredTemplate, deferredTokens]
+		[deferredPreviewVideoSrc, deferredTemplate, deferredTokens]
 	);
 	const scrollAndSeekPreview = useCallback(
 		(frame: number) => {
@@ -570,7 +565,7 @@ export const ProjectEditorPage = () => {
 									fps={previewFps}
 									controls
 									alwaysShowControls
-									numberOfSharedAudioTags={6}
+									numberOfSharedAudioTags={1}
 									overflowVisible
 									style={{ width: '100%', height: '100%' }}
 								/>

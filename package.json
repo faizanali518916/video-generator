@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "concurrently -k \"vite\" \"tsx watch server/index.ts\"",
+		"dev": "concurrently -k \"vite --host 0.0.0.0\" \"tsx watch server/index.ts\"",
 		"build": "tsc --noEmit && vite build",
 		"start": "tsx server/index.ts",
 		"format": "prettier --write .",

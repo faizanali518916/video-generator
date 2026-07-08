@@ -17,7 +17,6 @@ export type TranscriptPage = {
 
 export type InfographicVideoProps = {
 	mediaMode?: 'preview' | 'render';
-	audioSrc?: string;
 	transcriptPages?: TranscriptPage[];
 	template: InfographicTemplate;
 	videoSrc?: string;

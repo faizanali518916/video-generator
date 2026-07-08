@@ -50,7 +50,12 @@ const sendMedia = async (
 		res.status(416).set('Content-Range', `bytes */${fileStats.size}`).end();
 		return;
 	}
-	const headers: Record<string, string | number> = { 'Accept-Ranges': 'bytes', 'Content-Type': contentType };
+	const headers: Record<string, string | number> = {
+		'Accept-Ranges': 'bytes',
+		'Cache-Control': 'public, max-age=31536000, immutable',
+		'Content-Type': contentType,
+		'X-Content-Type-Options': 'nosniff',
+	};
 	if (downloadName) headers['Content-Disposition'] = `attachment; filename="${downloadName}"`;
 	if (match) {
 		const start = match[1] ? Number(match[1]) : Math.max(fileStats.size - Number(match[2]), 0);
