@@ -1,7 +1,8 @@
-import { Player } from '@remotion/player';
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Player, type PlayerRef } from '@remotion/player';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { JsonPanel } from '../builder/JsonPanel';
+import { LayoutPreview } from '../builder/LayoutPreview';
 import { SegmentEditor } from '../builder/SegmentEditor';
 import { ThemeEditor } from '../builder/ThemeEditor';
 import { newSegment, toFormSegment, toTemplate } from '../builder/templateMapper';
@@ -13,6 +14,7 @@ import {
 	VIDEO_HEIGHT,
 	VIDEO_WIDTH,
 	defaultTheme,
+	getSegmentDurationInFrames,
 	getTemplateDurationInFrames,
 	type InfographicTemplate,
 	type LayoutKind,
@@ -25,11 +27,19 @@ import {
 	type JobManifest,
 	type ProjectDocument,
 } from '../shared/schemas';
+import { button, errorNotice, eyebrow, field, fieldLabel, input, notice, panel, secondaryButton } from '../ui';
 import { InfographicVideo } from '../video/InfographicVideo';
 import type { TranscriptPage } from '../video/types';
 
 type ProjectPayload = ProjectDocument & { slug: string };
 type RenderJob = JobManifest & { downloadUrl?: string };
+type PreviewQuality = 'smooth' | 'balanced' | 'full';
+
+const previewQualityOptions: Record<PreviewQuality, { fps: number; label: string }> = {
+	smooth: { fps: 15, label: 'Smooth' },
+	balanced: { fps: 24, label: 'Balanced' },
+	full: { fps: FPS, label: 'Full' },
+};
 
 const formSegments = (template: InfographicTemplate): FormSegment[] =>
 	template.segments.map((segment) => ({
@@ -65,6 +75,10 @@ export const ProjectEditorPage = () => {
 	const [renderStatus, setRenderStatus] = useState<'idle' | 'submitting' | 'error'>('idle');
 	const [renderError, setRenderError] = useState('');
 	const [notificationEmail, setNotificationEmail] = useState('');
+	const [previewQuality, setPreviewQuality] = useState<PreviewQuality>('smooth');
+	const [previewStartFrame, setPreviewStartFrame] = useState(0);
+	const previewPlayerRef = useRef<PlayerRef>(null);
+	const previewSectionRef = useRef<HTMLElement | null>(null);
 
 	const template = useMemo(
 		() =>
@@ -82,7 +96,38 @@ export const ProjectEditorPage = () => {
 		[title, hookText, intro, outro, caption, theme, videoBased, segments, videoSlug]
 	);
 	const durationInFrames = useMemo(() => getTemplateDurationInFrames(template, FPS), [template]);
+	const previewFps = previewQualityOptions[previewQuality].fps;
 	const deferredTemplate = useDeferredValue(template);
+	const segmentRanges = useMemo(() => {
+		let cursor = 0;
+
+		return template.segments.map((segment) => {
+			const startFrame = cursor;
+			const durationInFrames = getSegmentDurationInFrames(segment, FPS);
+			cursor += durationInFrames;
+
+			return {
+				endFrame: cursor,
+				startFrame,
+			};
+		});
+	}, [template]);
+	const previewDurationInFrames = useMemo(
+		() => getTemplateDurationInFrames(deferredTemplate, previewFps),
+		[deferredTemplate, previewFps]
+	);
+	const toPreviewFrame = useCallback(
+		(frame: number) => {
+			const frameAtPreviewFps = Math.round((frame / FPS) * previewFps);
+
+			return Math.max(0, Math.min(frameAtPreviewFps, Math.max(0, previewDurationInFrames - 1)));
+		},
+		[previewDurationInFrames, previewFps]
+	);
+	const previewInitialFrame = useMemo(
+		() => toPreviewFrame(previewStartFrame),
+		[previewStartFrame, toPreviewFrame]
+	);
 	const deferredTokens = useDeferredValue(tokens);
 	const selectedVideo = useMemo(() => videos.find((video) => video.slug === videoSlug) ?? null, [videos, videoSlug]);
 	const previewVideoSrc = videoSlug ? `/api/videos/${encodeURIComponent(videoSlug)}/file` : undefined;
@@ -99,6 +144,18 @@ export const ProjectEditorPage = () => {
 			mediaMode: 'preview' as const,
 		}),
 		[deferredPreviewAudioSrc, deferredPreviewVideoSrc, deferredTemplate, deferredTokens]
+	);
+	const scrollAndSeekPreview = useCallback(
+		(frame: number) => {
+			const targetFrame = toPreviewFrame(frame);
+			const seek = () => previewPlayerRef.current?.seekTo(targetFrame);
+
+			setPreviewStartFrame(frame);
+			previewSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			requestAnimationFrame(seek);
+			window.setTimeout(seek, 350);
+		},
+		[toPreviewFrame]
 	);
 	const applyTemplate = useCallback((next: InfographicTemplate, fallbackVideoSlug: string | null = null) => {
 		setTitle(next.title);
@@ -290,34 +347,35 @@ export const ProjectEditorPage = () => {
 
 	if (!loaded)
 		return (
-			<main className="page-shell">
-				<p>{error || 'Loading project…'}</p>
+			<main className="mx-auto max-w-[1800px] px-5 py-6 sm:px-7">
+				<p className={error ? errorNotice : 'text-indigo-100/70'}>{error || 'Loading project...'}</p>
 			</main>
 		);
 	return (
-		<main className="editor-shell">
-			<div className="editor-topbar">
-				<label className="builder-field">
-					<span>Project name</span>
-					<input value={name} onChange={(e) => setName(e.target.value)} />
+		<main className="mx-auto max-w-[1800px] px-5 py-6 pb-20 sm:px-7">
+			<div className="mb-4 grid items-end gap-2 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_minmax(190px,0.9fr)_minmax(240px,1.2fr)_minmax(120px,0.55fr)_minmax(145px,0.65fr)]">
+				<label className={field}>
+					<span className={fieldLabel}>Project name</span>
+					<input className={input} value={name} onChange={(e) => setName(e.target.value)} />
 				</label>
-				<label className="builder-field">
-					<span>Project slug</span>
-					<input value={slugDraft} onChange={(e) => setSlugDraft(e.target.value)} />
+				<label className={field}>
+					<span className={fieldLabel}>Project slug</span>
+					<input className={input} value={slugDraft} onChange={(e) => setSlugDraft(e.target.value)} />
 				</label>
-				<label className="builder-field">
-					<span>Notification email</span>
+				<label className={field}>
+					<span className={fieldLabel}>Notification email</span>
 					<input
+						className={input}
 						placeholder="Optional"
 						value={notificationEmail}
 						onChange={(e) => setNotificationEmail(e.target.value)}
 					/>
 				</label>
-				<button className="secondary editor-topbar-action" type="button" onClick={() => void saveClick()}>
+				<button className={`${secondaryButton} h-[50px]`} type="button" onClick={() => void saveClick()}>
 					Save
 				</button>
 				<button
-					className="editor-topbar-action"
+					className={`${button} h-[50px]`}
 					disabled={cannotRender}
 					type="button"
 					onClick={(event) => {
@@ -329,39 +387,60 @@ export const ProjectEditorPage = () => {
 					{renderStatus === 'submitting' ? 'Rendering...' : 'Render MP4'}
 				</button>
 			</div>
-			{renderNotice ? <div className="notice render-notice">{renderNotice}</div> : null}
+			{renderNotice ? (
+				<div className="mb-4 rounded-xl border border-cyan-200/55 bg-cyan-900/80 p-3 font-extrabold text-cyan-100">
+					{renderNotice}
+				</div>
+			) : null}
 			{noticeMessage && (
-				<div className={`notice ${error || renderError ? 'error render-error' : ''}`}>{noticeMessage}</div>
-			)}
-			{renderJob && (
-				<div className={`render-banner ${renderJob.status}`}>
-					<strong>{renderJob.stage.replaceAll('-', ' ')}</strong>
-					<progress max="1" value={renderJob.progress} />
-					<span>{Math.round(renderJob.progress * 100)}%</span>
-					{renderJob.deliveryStatus && <em>Delivery: {renderJob.deliveryStatus}</em>}
-					{renderJob.recipientEmail && <em>To: {renderJob.recipientEmail}</em>}
-					{renderJob.driveConfigured && renderJob.driveLink && <a href={renderJob.driveLink}>Drive link</a>}
-					{renderJob.error && <em>{renderJob.error}</em>}
-					{renderJob.deliveryError && <em>{renderJob.deliveryError}</em>}
-					{renderJob.downloadUrl && <a href={renderJob.downloadUrl}>Download MP4</a>}
+				<div className={error || renderError ? `${errorNotice} mb-4 mt-0` : `${notice} mb-4 mt-0 p-3`}>
+					{noticeMessage}
 				</div>
 			)}
-			<div className="editor-layout">
-				<section className="builder-main editor-form">
-					<div className="section-heading">
+			{renderJob && (
+				<div className="mb-4 grid items-center gap-2 rounded-xl bg-slate-950/80 p-3 md:grid-cols-[auto_minmax(180px,1fr)_auto_auto]">
+					<strong>{renderJob.stage.replaceAll('-', ' ')}</strong>
+					<progress className="w-full accent-indigo-500" max="1" value={renderJob.progress} />
+					<span>{Math.round(renderJob.progress * 100)}%</span>
+					{renderJob.deliveryStatus && (
+						<em className="not-italic text-rose-300">Delivery: {renderJob.deliveryStatus}</em>
+					)}
+					{renderJob.recipientEmail && (
+						<em className="not-italic text-rose-300 md:col-span-full">To: {renderJob.recipientEmail}</em>
+					)}
+					{renderJob.driveConfigured && renderJob.driveLink && (
+						<a className="text-cyan-200" href={renderJob.driveLink}>
+							Drive link
+						</a>
+					)}
+					{renderJob.error && <em className="not-italic text-rose-300 md:col-span-full">{renderJob.error}</em>}
+					{renderJob.deliveryError && (
+						<em className="not-italic text-rose-300 md:col-span-full">{renderJob.deliveryError}</em>
+					)}
+					{renderJob.downloadUrl && (
+						<a className="text-cyan-200" href={renderJob.downloadUrl}>
+							Download MP4
+						</a>
+					)}
+				</div>
+			)}
+			<div className="grid items-stretch gap-5 xl:grid-cols-[minmax(340px,0.95fr)_minmax(360px,1fr)_minmax(340px,0.9fr)]">
+				<section className={`${panel} min-h-[720px] rounded-[20px] p-6`}>
+					<div className="flex items-center justify-between">
 						<div>
-							<p className="eyebrow">Template builder</p>
-							<h1>{title}</h1>
+							<p className={eyebrow}>Template builder</p>
+							<h1 className="my-1 text-3xl font-black text-white">{title}</h1>
 						</div>
 					</div>
-					<div className="builder-settings">
-						<label className="builder-field wide">
-							<span>Template title</span>
-							<input value={title} onChange={(e) => setTitle(e.target.value)} />
+					<div className="mt-4 grid gap-3">
+						<label className={field}>
+							<span className={fieldLabel}>Template title</span>
+							<input className={input} value={title} onChange={(e) => setTitle(e.target.value)} />
 						</label>
-						<label className="builder-field wide">
-							<span>Source video</span>
+						<label className={field}>
+							<span className={fieldLabel}>Source video</span>
 							<select
+								className={input}
 								disabled={sourceVideoDisabled}
 								value={videoSlug || ''}
 								onChange={(e) => setVideoSlug(e.target.value || null)}
@@ -370,112 +449,228 @@ export const ProjectEditorPage = () => {
 								{videos.map((video) => (
 									<option value={video.slug} key={video.slug}>
 										{video.slug}
-										{video.hasTokens ? ' · captions ready' : ''}
+										{video.hasTokens ? ' (captioned)' : ''}
 									</option>
 								))}
 							</select>
 						</label>
-						<label className="builder-field wide">
-							<span>Hook text</span>
-							<input disabled={!intro} value={hookText} onChange={(e) => setHookText(e.target.value)} />
+						<label className={field}>
+							<span className={fieldLabel}>Hook text</span>
+							<input
+								className={input}
+								disabled={!intro}
+								value={hookText}
+								onChange={(e) => setHookText(e.target.value)}
+							/>
 						</label>
-						<div className="toggle-row">
-							<label>
-								<input checked={intro} onChange={(e) => setIntro(e.target.checked)} type="checkbox" /> Intro
+						<div className="flex flex-wrap gap-4 text-indigo-100">
+							<label className="flex items-center gap-2">
+								<input
+									className="h-4 w-4"
+									checked={intro}
+									onChange={(e) => setIntro(e.target.checked)}
+									type="checkbox"
+								/>{' '}
+								Intro
 							</label>
-							<label>
-								<input checked={outro} onChange={(e) => setOutro(e.target.checked)} type="checkbox" /> Outro
+							<label className="flex items-center gap-2">
+								<input
+									className="h-4 w-4"
+									checked={outro}
+									onChange={(e) => setOutro(e.target.checked)}
+									type="checkbox"
+								/>{' '}
+								Outro
 							</label>
-							<label>
+							<label className="flex items-center gap-2">
 								<input
 									checked={videoBased}
+									className="h-4 w-4"
 									onChange={(e) => {
 										setVideoBased(e.target.checked);
 										if (!e.target.checked) setCaption(false);
 									}}
 									type="checkbox"
-								/>{' '}
+								/>
 								Video-based
 							</label>
-							<label>
+							<label className="flex items-center gap-2">
 								<input
 									checked={caption}
+									className="h-4 w-4"
 									disabled={!videoBased}
 									onChange={(e) => setCaption(e.target.checked)}
 									type="checkbox"
-								/>{' '}
+								/>
 								Captions
 							</label>
 						</div>
 					</div>
-					<section className="form-section">
-						<h2>Theme</h2>
+					<section className="mt-6 border-t border-sky-200/15 pt-5">
+						<div className="flex items-center justify-between">
+							<h2 className="my-1 text-2xl font-black text-white">Theme</h2>
+						</div>
 						<ThemeEditor
 							theme={theme}
 							onChange={(key, value) => setTheme((current) => ({ ...current, [key]: value }))}
 						/>
 					</section>
-					<section className="form-section">
-						<div className="section-heading">
-							<h2>Scenes</h2>
-							<button className="secondary" onClick={() => setSegments((current) => [...current, newSegment()])}>
-								Add scene
-							</button>
-						</div>
-						{segments.map((segment, index) => (
-							<SegmentEditor
-								key={index}
-								index={index}
-								segment={segment}
-								segmentCount={segments.length}
-								theme={theme}
-								videoBased={videoBased}
-								onUpdate={updateSegment}
-								onMove={move}
-								onDuplicate={(i) =>
-									setSegments((current) => [...current.slice(0, i + 1), { ...current[i] }, ...current.slice(i + 1)])
-								}
-								onRemove={(i) =>
-									setSegments((current) => (current.length > 1 ? current.filter((_, index) => index !== i) : current))
-								}
-							/>
-						))}
-					</section>
 				</section>
-				<aside className="editor-sidebar">
-					<section className="preview-panel">
-						<div className="section-heading">
-							<h2>Live preview</h2>
-							<span>{Math.round(durationInFrames / FPS)}s</span>
+				<JsonPanel
+					className="min-h-[720px]"
+					copied={copied}
+					json={jsonDraft}
+					jsonError={jsonError}
+					onJsonChange={changeJson}
+					onCopy={() => {
+						void navigator.clipboard.writeText(jsonDraft);
+						setCopied(true);
+					}}
+				/>
+				<aside className="grid">
+					<section ref={previewSectionRef} className={`${panel} flex min-h-[720px] flex-col rounded-[20px] p-6`}>
+						<div className="mb-4 grid gap-3">
+							<div>
+								<h2 className="m-0 text-2xl font-black text-white">Preview</h2>
+							</div>
+							<div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+								<select
+									aria-label="Preview quality"
+									className="h-10 min-w-[190px] rounded-lg border-0 bg-slate-800/90 px-3 text-sm font-extrabold text-white outline-none"
+									onChange={(event) => setPreviewQuality(event.target.value as PreviewQuality)}
+									value={previewQuality}
+								>
+									{Object.entries(previewQualityOptions).map(([value, option]) => (
+										<option key={value} value={value}>
+											{option.label} / {option.fps} FPS
+										</option>
+									))}
+								</select>
+								<span className="flex h-10 items-center rounded-lg px-2 text-sm font-black text-indigo-100/75">
+									{Math.round(durationInFrames / FPS)}s / {previewDurationInFrames}f
+								</span>
+							</div>
 						</div>
-						<div className="preview-player">
-							<Player
-								acknowledgeRemotionLicense
-								component={InfographicVideo}
-								inputProps={previewInputProps}
-								durationInFrames={durationInFrames}
-								compositionWidth={VIDEO_WIDTH}
-								compositionHeight={VIDEO_HEIGHT}
-								fps={FPS}
-								controls
-								alwaysShowControls
-								overflowVisible
-								style={{ width: '100%', height: '100%' }}
-							/>
+						<div className="flex flex-1 items-start justify-center">
+							<div className="flex w-full flex-col items-end">
+								<div className="aspect-[1080/1920] w-full max-w-[380px] overflow-visible rounded-xl bg-black">
+								<Player
+									ref={previewPlayerRef}
+									initialFrame={previewInitialFrame}
+									key={`preview-${previewQuality}-${videoSlug ?? 'none'}-${previewInitialFrame}`}
+									acknowledgeRemotionLicense
+									audioLatencyHint="playback"
+									bufferStateDelayInMilliseconds={180}
+									component={InfographicVideo}
+									inputProps={previewInputProps}
+									durationInFrames={previewDurationInFrames}
+									compositionWidth={VIDEO_WIDTH}
+									compositionHeight={VIDEO_HEIGHT}
+									fps={previewFps}
+									controls
+									alwaysShowControls
+									numberOfSharedAudioTags={6}
+									overflowVisible
+									style={{ width: '100%', height: '100%' }}
+								/>
+								</div>
+							</div>
 						</div>
 					</section>
-					<JsonPanel
-						copied={copied}
-						json={jsonDraft}
-						jsonError={jsonError}
-						onJsonChange={changeJson}
-						onCopy={() => {
-							void navigator.clipboard.writeText(jsonDraft);
-							setCopied(true);
-						}}
-					/>
 				</aside>
 			</div>
+
+			<section className={`${panel} mt-6 rounded-[20px] p-6`}>
+				<div className="flex items-center justify-between">
+					<div>
+						<p className={eyebrow}>Scenes</p>
+						<h2 className="my-1 text-2xl font-black text-white">
+							{segments.length} segment{segments.length === 1 ? '' : 's'}
+						</h2>
+					</div>
+					<button className={secondaryButton} onClick={() => setSegments((current) => [...current, newSegment()])}>
+						Add scene
+					</button>
+				</div>
+				<div className="mt-4 grid gap-4">
+					{segments.map((segment, index) => (
+						<article className="grid gap-3" key={index}>
+							<div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-sky-200/15 bg-slate-950/35 px-5 py-4">
+								<strong className="text-xl text-white">Segment {index + 1}</strong>
+								<div className="flex flex-wrap justify-end gap-2">
+									<button
+										className={secondaryButton}
+										disabled={index === 0}
+										onClick={() => move(index, -1)}
+										type="button"
+									>
+										Up
+									</button>
+									<button
+										className={secondaryButton}
+										disabled={index === segments.length - 1}
+										onClick={() => move(index, 1)}
+										type="button"
+									>
+										Down
+									</button>
+									<button
+										className={secondaryButton}
+										onClick={() =>
+											setSegments((current) => [
+												...current.slice(0, index + 1),
+												{ ...current[index] },
+												...current.slice(index + 1),
+											])
+										}
+										type="button"
+									>
+										Duplicate
+									</button>
+									<button
+										className={secondaryButton}
+										onClick={() =>
+											setSegments((current) =>
+												current.length > 1 ? current.filter((_, currentIndex) => currentIndex !== index) : current
+											)
+										}
+										type="button"
+									>
+										Remove
+									</button>
+								</div>
+							</div>
+							<div
+								className={
+									segment.videoShown
+										? 'grid gap-4'
+										: 'grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,390px)] xl:gap-0'
+								}
+							>
+								<SegmentEditor
+									index={index}
+									segment={segment}
+									theme={theme}
+									videoBased={videoBased}
+									onUpdate={updateSegment}
+								/>
+								{segment.videoShown ? null : (
+									<div className="min-w-0">
+										<LayoutPreview
+											accent={segment.accent || theme.accent}
+											endFrame={segmentRanges[index]?.endFrame ?? 0}
+											onSeekToStart={() => scrollAndSeekPreview(segmentRanges[index]?.startFrame ?? 0)}
+											segment={segment}
+											startFrame={segmentRanges[index]?.startFrame ?? 0}
+											theme={theme}
+										/>
+									</div>
+								)}
+							</div>
+						</article>
+					))}
+				</div>
+			</section>
 		</main>
 	);
 };

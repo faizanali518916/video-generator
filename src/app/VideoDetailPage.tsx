@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { jsonOptions, request, type VideoDetail } from '../api';
 import type { JobManifest, PipelineRequest } from '../shared/schemas';
+import { button, errorNotice, eyebrow, mutedText, pageShell, panel, secondaryButton } from '../ui';
 
 const stageDetails: Record<string, { label: string; description: string }> = {
 	queued: { label: 'Queued', description: 'Waiting for the current task to begin.' },
@@ -57,85 +58,90 @@ export const VideoDetailPage = () => {
 			setError(e instanceof Error ? e.message : String(e));
 		}
 	};
+
 	if (!video)
 		return (
-			<main className="page-shell">
-				<p>{error || 'Loading video…'}</p>
+			<main className={pageShell}>
+				<p className={error ? errorNotice : mutedText}>{error || 'Loading video...'}</p>
 			</main>
 		);
+
 	return (
-		<main className="page-shell">
-			<Link className="back-link" to="/videos">
-				← Video library
+		<main className={pageShell}>
+			<Link className="inline-flex rounded-full border border-transparent px-3.5 py-2 text-indigo-100 no-underline" to="/videos">
+				Back to video library
 			</Link>
-			<section className="detail-grid">
-				<div className="video-panel">
-					<video controls src={video.previewUrl} />
-					<h1>{slug}</h1>
+			<section className="mt-5 grid gap-7 lg:grid-cols-[minmax(300px,0.8fr)_minmax(420px,1.2fr)]">
+				<div className={`${panel} rounded-3xl p-6`}>
+					<video className="max-h-[70vh] w-full rounded-2xl bg-black" controls src={video.previewUrl} />
+					<h1 className="mt-5 text-3xl font-black text-white">{slug}</h1>
 				</div>
-				<section className="pipeline-panel">
-					<p className="eyebrow">Caption pipeline</p>
-					<h2>Generate each artifact in order.</h2>
-					<div className="pipeline-list">
-						<div className={video.hasAudio ? 'done' : ''}>
-							<strong>1. audio.wav</strong>
-							<button
-								disabled={Boolean(job && !['completed', 'failed'].includes(job.status))}
-								onClick={() => void run('audio')}
+				<section className={`${panel} rounded-3xl p-6`}>
+					<p className={eyebrow}>Caption pipeline</p>
+					<h2 className="mt-2 text-2xl font-black text-white">Generate each artifact in order.</h2>
+					<div className="my-6 grid gap-2.5">
+						{[
+							{ done: video.hasAudio, label: '1. audio.wav', action: 'audio' as const, disabled: false, buttonText: 'Generate audio' },
+							{ done: video.hasCaptions, label: '2. captions.json', action: 'captions' as const, disabled: !video.hasAudio, buttonText: 'Generate captions' },
+							{ done: video.hasTokens, label: '3. tokens.json', action: 'tokens' as const, disabled: !video.hasCaptions, buttonText: 'Build tokens' },
+						].map((step) => (
+							<div
+								className={`flex items-center justify-between gap-3 rounded-xl border bg-slate-950/70 p-3 ${
+									step.done ? 'border-emerald-300/45' : 'border-sky-200/15'
+								}`}
+								key={step.label}
 							>
-								Generate audio
-							</button>
-						</div>
-						<div className={video.hasCaptions ? 'done' : ''}>
-							<strong>2. captions.json</strong>
-							<button
-								disabled={!video.hasAudio || Boolean(job && !['completed', 'failed'].includes(job.status))}
-								onClick={() => void run('captions')}
-							>
-								Generate captions
-							</button>
-						</div>
-						<div className={video.hasTokens ? 'done' : ''}>
-							<strong>3. tokens.json</strong>
-							<button
-								disabled={!video.hasCaptions || Boolean(job && !['completed', 'failed'].includes(job.status))}
-								onClick={() => void run('tokens')}
-							>
-								Build tokens
-							</button>
-						</div>
+								<strong>{step.label}</strong>
+								<button
+									className={secondaryButton}
+									disabled={step.disabled || Boolean(job && !['completed', 'failed'].includes(job.status))}
+									onClick={() => void run(step.action)}
+								>
+									{step.buttonText}
+								</button>
+							</div>
+						))}
 					</div>
-					<label className="force-toggle">
-						<input checked={force} onChange={(e) => setForce(e.target.checked)} type="checkbox" /> Regenerate and
-						invalidate downstream files
+					<label className="my-4 block text-indigo-100/75">
+						<input checked={force} className="mr-2" onChange={(e) => setForce(e.target.checked)} type="checkbox" />
+						Regenerate and invalidate downstream files
 					</label>
-					<button className="primary-wide" disabled={jobRunning} onClick={() => void run('full')}>
-						{jobRunning ? 'Pipeline runningâ€¦' : 'Run full pipeline'}
+					<button className={`${button} w-full`} disabled={jobRunning} onClick={() => void run('full')}>
+						{jobRunning ? 'Pipeline running...' : 'Run full pipeline'}
 					</button>
 					{job && stage && (
-						<div className={`pipeline-progress-card ${job.status}`} aria-live="polite">
-							<div className="pipeline-progress-header">
-								<div>
-									<span className="pipeline-progress-kicker">Caption pipeline</span>
-									<strong>{stage.label}</strong>
+						<div className={`${panel} mt-5 rounded-2xl p-5`} aria-live="polite">
+							<div className="flex items-center justify-between gap-5">
+								<div className="grid gap-1">
+									<span className={eyebrow}>Caption pipeline</span>
+									<strong className="text-lg text-white">{stage.label}</strong>
 								</div>
-								<span className="pipeline-progress-percent">{progressPercent}%</span>
+								<span className="text-2xl font-black tabular-nums text-white">{progressPercent}%</span>
 							</div>
 							<div
 								aria-label={`${stage.label}: ${progressPercent}%`}
 								aria-valuemax={100}
 								aria-valuemin={0}
 								aria-valuenow={progressPercent}
-								className="pipeline-progress-track"
+								className="mt-4 h-3 overflow-hidden rounded-full border border-slate-400/10 bg-slate-400/15"
 								role="progressbar"
 							>
-								<span className="pipeline-progress-fill" style={{ width: `${progressPercent}%` }} />
+								<span
+									className={`block h-full rounded-full ${
+										job.status === 'failed'
+											? 'bg-gradient-to-r from-rose-600 to-rose-400'
+											: job.status === 'completed'
+												? 'bg-gradient-to-r from-emerald-500 to-emerald-300'
+												: 'bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-300'
+									}`}
+									style={{ width: `${progressPercent}%` }}
+								/>
 							</div>
-							{stage.description && <p className="pipeline-progress-description">{stage.description}</p>}
-							{job.error && <p className="pipeline-progress-error">{job.error}</p>}
+							{stage.description && <p className="mt-3 text-sm text-slate-300">{stage.description}</p>}
+							{job.error && <p className="mt-3 rounded-xl bg-rose-500/10 p-3 text-sm text-rose-200">{job.error}</p>}
 						</div>
 					)}
-					{error && <p className="notice error">{error}</p>}
+					{error && <p className={errorNotice}>{error}</p>}
 				</section>
 			</section>
 		</main>

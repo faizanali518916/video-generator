@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { jsonOptions, request, slugify, type ProjectSummary } from '../api';
+import { button, card, cardGrid, chip, dangerButton, errorNotice, eyebrow, hero, heroTitle, input, mutedText, notice, pageShell } from '../ui';
 
 export const ProjectsPage = () => {
 	const [projects, setProjects] = useState<ProjectSummary[]>([]);
@@ -30,31 +31,35 @@ export const ProjectsPage = () => {
 		await load();
 	};
 	return (
-		<main className="page-shell">
-			<section className="page-hero">
+		<main className={pageShell}>
+			<section className={hero}>
 				<div>
-					<p className="eyebrow">Project library</p>
-					<h1>Build videos from reusable templates.</h1>
-					<p>Projects are small JSON documents. Your source videos stay independent and reusable.</p>
+					<p className={eyebrow}>Project library</p>
+					<h1 className={heroTitle}>Build videos from reusable templates.</h1>
+					<p className={mutedText}>Projects are small JSON documents. Your source videos stay independent and reusable.</p>
 				</div>
-				<div className="create-row">
-					<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" />
-					<button onClick={() => void create()}>New project</button>
+				<div className="grid w-full gap-2 lg:max-w-sm">
+					<input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" />
+					<button className={button} onClick={() => void create()}>
+						New project
+					</button>
 				</div>
 			</section>
-			{error && <p className="notice error">{error}</p>}
-			<section className="card-grid">
+			{error && <p className={errorNotice}>{error}</p>}
+			<section className={cardGrid}>
 				{projects.map((project) => (
-					<article className="library-card" key={project.slug}>
+					<article className={card} key={project.slug}>
 						<div>
-							<span className="status-chip">{project.template.videoBased ? 'Video-based' : 'Infographic'}</span>
-							<h2>{project.name}</h2>
-							<p>{project.videoSlug ? `Video: ${project.videoSlug}` : 'No video selected'}</p>
-							<small>Updated {new Date(project.updatedAt).toLocaleString()}</small>
+							<span className={chip}>{project.template.videoBased ? 'Video-based' : 'Infographic'}</span>
+							<h2 className="my-3 text-2xl font-black text-white">{project.name}</h2>
+							<p className={mutedText}>{project.videoSlug ? `Video: ${project.videoSlug}` : 'No video selected'}</p>
+							<small className={mutedText}>Updated {new Date(project.updatedAt).toLocaleString()}</small>
 						</div>
-						<div className="card-actions">
-							<Link to={`/projects/${project.slug}`}>Open editor</Link>
-							<button className="danger" onClick={() => void remove(project.slug)}>
+						<div className="mt-5 flex gap-2">
+							<Link className={`${button} flex-1 text-center no-underline`} to={`/projects/${project.slug}`}>
+								Open editor
+							</Link>
+							<button className={`${dangerButton} flex-1`} onClick={() => void remove(project.slug)}>
 								Delete
 							</button>
 						</div>
@@ -62,7 +67,7 @@ export const ProjectsPage = () => {
 				))}
 			</section>
 			{!projects.length && !error && (
-				<div className="empty-state">No projects yet. Give the first one a name above.</div>
+				<div className={notice}>No projects yet. Give the first one a name above.</div>
 			)}
 		</main>
 	);

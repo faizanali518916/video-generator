@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { request, type RenderSummary } from '../api';
+import { button, card, cardGrid, chip, errorNotice, eyebrow, hero, heroTitle, mutedText, notice, pageShell } from '../ui';
 
 const statusLabel = (job: RenderSummary) => {
 	if (job.status === 'failed') return 'Failed';
@@ -11,11 +12,10 @@ const statusLabel = (job: RenderSummary) => {
 	return job.status === 'completed' ? 'Rendered' : job.status;
 };
 
-const statusClass = (job: RenderSummary) => {
-	if (job.status === 'failed') return 'danger';
-	if (job.deliveryStatus === 'emailed') return 'ready';
-	if (job.deliveryStatus === 'partial') return 'warning';
-	if (job.deliveryStatus === 'uploaded') return 'ready';
+const statusColor = (job: RenderSummary) => {
+	if (job.status === 'failed') return 'border-rose-300/35 bg-rose-500/15 text-rose-200';
+	if (['emailed', 'uploaded'].includes(job.deliveryStatus || '')) return 'border-emerald-300/35 bg-emerald-500/15 text-emerald-200';
+	if (job.deliveryStatus === 'partial') return 'border-amber-300/35 bg-amber-500/15 text-amber-100';
 	return '';
 };
 
@@ -46,65 +46,73 @@ export const RendersPage = () => {
 	}, [renders]);
 
 	return (
-		<main className="page-shell">
-			<section className="page-hero">
+		<main className={pageShell}>
+			<section className={hero}>
 				<div>
-					<p className="eyebrow">Render history</p>
-					<h1>Completed renders, delivery status, and local files.</h1>
-					<p>Everything here is read from the filesystem, so the list reflects what the app has actually saved.</p>
+					<p className={eyebrow}>Render history</p>
+					<h1 className={heroTitle}>Completed renders, delivery status, and local files.</h1>
+					<p className={mutedText}>Everything here is read from the filesystem, so the list reflects what the app has actually saved.</p>
 				</div>
-				<div className="create-row">
-					<button onClick={() => void load()}>Refresh</button>
+				<div className="grid w-full gap-2 lg:max-w-xs">
+					<button className={button} onClick={() => void load()}>
+						Refresh
+					</button>
 				</div>
 			</section>
-			{error && <p className="notice error">{error}</p>}
-			<section className="card-grid render-history-grid">
-				{renders.map((job) => (
-					<article className={`library-card render-history-card status-${job.status}`} key={`${job.id}-${job.status}`}>
-						<div className="render-card-content">
-							<div className="render-card-badges">
-								<span className={`status-chip ${statusClass(job)}`}>{statusLabel(job)}</span>
-								<span className={`status-chip render-meta-chip ${job.driveConfigured ? 'ready' : ''}`}>
-									{job.driveConfigured ? 'Drive' : 'Local'}
-								</span>
-								<span className={`status-chip render-meta-chip ${job.emailSent ? 'ready' : ''}`}>
-									{job.emailSent ? 'Email sent' : 'Email pending'}
-								</span>
-							</div>
-							<h2>{job.projectSlug || 'Render job'}</h2>
-							<p>{job.recipientEmail ? `Notification email: ${job.recipientEmail}` : 'No email provided'}</p>
-							<small>Updated {new Date(job.updatedAt).toLocaleString()}</small>
-							<div className={`render-card-progress ${job.status === 'failed' ? 'stage-only' : ''}`}>
-								<div className="render-card-progress-label">
-									<span>Stage</span>
-									<strong>{formatStage(job.stage)}</strong>
-									{job.status !== 'failed' && <em>{Math.round(job.progress * 100)}%</em>}
+			{error && <p className={errorNotice}>{error}</p>}
+			<section className={cardGrid}>
+				{renders.map((job) => {
+					const progress = Math.min(100, Math.max(0, job.progress * 100));
+
+					return (
+						<article className={`${card} gap-4`} key={`${job.id}-${job.status}`}>
+							<div className="flex flex-1 flex-col">
+								<div className="flex flex-wrap gap-2">
+									<span className={`${chip} ${statusColor(job)}`}>{statusLabel(job)}</span>
+									<span className={`${chip} ${job.driveConfigured ? 'border-emerald-300/35 bg-emerald-500/15 text-emerald-200' : ''}`}>
+										{job.driveConfigured ? 'Drive' : 'Local'}
+									</span>
+									<span className={`${chip} ${job.emailSent ? 'border-emerald-300/35 bg-emerald-500/15 text-emerald-200' : ''}`}>
+										{job.emailSent ? 'Email sent' : 'Email pending'}
+									</span>
 								</div>
-								{job.status !== 'failed' && (
-									<div
-										aria-label={`${formatStage(job.stage)}: ${Math.round(job.progress * 100)}%`}
-										aria-valuemax={100}
-										aria-valuemin={0}
-										aria-valuenow={Math.round(job.progress * 100)}
-										className="render-card-progress-track"
-										role="progressbar"
-									>
-										<span style={{ width: `${Math.min(100, Math.max(0, job.progress * 100))}%` }} />
+								<h2 className="my-3 text-xl font-black text-white">{job.projectSlug || 'Render job'}</h2>
+								<p className={`${mutedText} m-0 break-words`}>
+									{job.recipientEmail ? `Notification email: ${job.recipientEmail}` : 'No email provided'}
+								</p>
+								<small className={mutedText}>Updated {new Date(job.updatedAt).toLocaleString()}</small>
+								<div className="mt-4 rounded-xl border border-sky-200/10 bg-white/[0.03] p-3">
+									<div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-2">
+										<span className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">Stage</span>
+										<strong className="truncate text-sm text-indigo-50">{formatStage(job.stage)}</strong>
+										{job.status !== 'failed' && <em className="text-xs font-extrabold not-italic text-indigo-200">{Math.round(progress)}%</em>}
 									</div>
-								)}
+									{job.status !== 'failed' && (
+										<div
+											aria-label={`${formatStage(job.stage)}: ${Math.round(progress)}%`}
+											aria-valuemax={100}
+											aria-valuemin={0}
+											aria-valuenow={Math.round(progress)}
+											className="mt-2 h-2 overflow-hidden rounded-full bg-slate-400/15"
+											role="progressbar"
+										>
+											<span className="block h-full rounded-full bg-gradient-to-r from-indigo-500 via-indigo-400 to-cyan-300" style={{ width: `${progress}%` }} />
+										</div>
+									)}
+								</div>
+								{job.deliveryError && <p className="mt-3 max-h-24 overflow-auto rounded-xl border border-dashed border-rose-300/40 bg-rose-500/10 p-3 text-sm text-rose-100">{job.deliveryError}</p>}
+								{job.error && <p className="mt-3 max-h-24 overflow-auto rounded-xl border border-dashed border-rose-300/40 bg-rose-500/10 p-3 text-sm text-rose-100">{job.error}</p>}
 							</div>
-							{job.deliveryError && <p className="render-card-error">{job.deliveryError}</p>}
-							{job.error && <p className="render-card-error">{job.error}</p>}
-						</div>
-						<div className="card-actions">
-							{job.projectSlug && <Link to={`/projects/${job.projectSlug}`}>Open project</Link>}
-							{job.downloadUrl && <a href={job.downloadUrl}>Download MP4</a>}
-							{job.driveConfigured && job.driveLink && <a href={job.driveLink}>Drive link</a>}
-						</div>
-					</article>
-				))}
+							<div className="mt-2 flex flex-wrap gap-2">
+								{job.projectSlug && <Link className={`${button} flex-1 text-center no-underline`} to={`/projects/${job.projectSlug}`}>Open project</Link>}
+								{job.downloadUrl && <a className={`${button} flex-1 text-center no-underline`} href={job.downloadUrl}>Download MP4</a>}
+								{job.driveConfigured && job.driveLink && <a className={`${button} flex-1 text-center no-underline`} href={job.driveLink}>Drive link</a>}
+							</div>
+						</article>
+					);
+				})}
 			</section>
-			{!renders.length && !error && <div className="empty-state">No renders yet.</div>}
+			{!renders.length && !error && <div className={notice}>No renders yet.</div>}
 		</main>
 	);
 };

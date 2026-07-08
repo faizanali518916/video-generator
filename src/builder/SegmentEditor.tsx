@@ -6,16 +6,13 @@ import {
 	type LayoutKind,
 	type Theme,
 } from '../layoutCatalog';
+import { field, fieldLabel, input, panel } from '../ui';
 import type { FormSegment } from './types';
 
 type SegmentEditorProps = {
 	index: number;
-	onDuplicate: (index: number) => void;
-	onMove: (index: number, direction: -1 | 1) => void;
-	onRemove: (index: number) => void;
 	onUpdate: (index: number, key: keyof FormSegment, value: FormSegment[keyof FormSegment]) => void;
 	segment: FormSegment;
-	segmentCount: number;
 	theme: Theme;
 	videoBased: boolean;
 };
@@ -34,12 +31,8 @@ const durationRangeLabel = (layout: LayoutKind): string => {
 
 export const SegmentEditor = ({
 	index,
-	onDuplicate,
-	onMove,
-	onRemove,
 	onUpdate,
 	segment,
-	segmentCount,
 	theme,
 	videoBased,
 }: SegmentEditorProps) => {
@@ -49,39 +42,23 @@ export const SegmentEditor = ({
 	const maxDuration = segment.videoShown ? MAX_VIDEO_SCENE_DURATION_SECONDS : spec.maxDurationSeconds;
 
 	return (
-		<article className="segment-editor">
-			<div className="segment-toolbar">
-				<strong>Segment {index + 1}</strong>
-				<div>
-					<button disabled={index === 0} onClick={() => onMove(index, -1)} type="button">
-						Up
-					</button>
-					<button disabled={index === segmentCount - 1} onClick={() => onMove(index, 1)} type="button">
-						Down
-					</button>
-					<button onClick={() => onDuplicate(index)} type="button">
-						Duplicate
-					</button>
-					<button onClick={() => onRemove(index)} type="button">
-						Remove
-					</button>
-				</div>
-			</div>
-
-			<div className="segment-fields">
-				<label className="builder-field builder-toggle">
+		<article className={`${panel} flex h-full flex-col rounded-[20px] p-6`}>
+			<div className="grid gap-x-5 gap-y-2 md:grid-cols-2">
+				<label className="flex items-center gap-2">
 					<input
 						checked={segment.videoShown}
+						className="h-6 w-6 cursor-pointer disabled:cursor-default disabled:opacity-35"
 						disabled={!videoBased}
 						onChange={(event) => onUpdate(index, 'videoShown', event.target.checked)}
 						type="checkbox"
 					/>
-					<span>Video shown</span>
+					<span className={fieldLabel}>Video shown</span>
 				</label>
 
-				<label className="builder-field">
-					<span>{durationLabel}</span>
+				<label className={field}>
+					<span className={fieldLabel}>{durationLabel}</span>
 					<input
+						className={input}
 						max={maxDuration}
 						min={minDuration}
 						onChange={(event) => onUpdate(index, 'durationSeconds', event.target.value)}
@@ -93,9 +70,9 @@ export const SegmentEditor = ({
 
 				{segment.videoShown ? null : (
 					<>
-						<label className="builder-field">
-							<span>Layout</span>
-							<select onChange={(event) => onUpdate(index, 'layout', event.target.value)} value={segment.layout}>
+						<label className={field}>
+							<span className={fieldLabel}>Layout</span>
+							<select className={input} onChange={(event) => onUpdate(index, 'layout', event.target.value)} value={segment.layout}>
 								{layoutKinds.map((layout) => (
 									<option key={layout} value={layout}>
 										{LAYOUT_SPECS[layout].label} / {itemCountLabel(layout)} / {durationRangeLabel(layout)}
@@ -104,45 +81,50 @@ export const SegmentEditor = ({
 							</select>
 						</label>
 
-						<label className="builder-field">
-							<span>Accent</span>
+						<label className={field}>
+							<span className={fieldLabel}>Accent</span>
 							<input
+								className={`${input} !h-[50px] !p-1`}
 								onChange={(event) => onUpdate(index, 'accent', event.target.value)}
 								type="color"
 								value={segment.accent || theme.accent}
 							/>
 						</label>
 
-						<label className="builder-field wide">
-							<span>Title</span>
+						<label className={`${field} md:col-span-2`}>
+							<span className={fieldLabel}>Title</span>
 							<input
+								className={input}
 								onChange={(event) => onUpdate(index, 'title', event.target.value)}
 								type="text"
 								value={segment.title}
 							/>
 						</label>
 
-						<label className="builder-field wide">
-							<span>Subtitle</span>
+						<label className={`${field} md:col-span-2`}>
+							<span className={fieldLabel}>Subtitle</span>
 							<input
+								className={input}
 								onChange={(event) => onUpdate(index, 'subtitle', event.target.value)}
 								type="text"
 								value={segment.subtitle}
 							/>
 						</label>
 
-						<label className="builder-field">
-							<span>Metric</span>
+						<label className={field}>
+							<span className={fieldLabel}>Metric</span>
 							<input
+								className={input}
 								onChange={(event) => onUpdate(index, 'metric', event.target.value)}
 								type="text"
 								value={segment.metric}
 							/>
 						</label>
 
-						<label className="builder-field">
-							<span>Values</span>
+						<label className={field}>
+							<span className={fieldLabel}>Values</span>
 							<input
+								className={input}
 								onChange={(event) => onUpdate(index, 'valuesText', event.target.value)}
 								placeholder="80, 55, 90"
 								type="text"
@@ -150,9 +132,10 @@ export const SegmentEditor = ({
 							/>
 						</label>
 
-						<label className="builder-field wide">
-							<span>Items ({itemCountLabel(segment.layout)})</span>
+						<label className={`${field} md:col-span-2`}>
+							<span className={fieldLabel}>Items ({itemCountLabel(segment.layout)})</span>
 							<textarea
+								className={input}
 								onChange={(event) => onUpdate(index, 'itemsText', event.target.value)}
 								rows={Math.min(spec.maxItems, 7)}
 								value={segment.itemsText}
